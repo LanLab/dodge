@@ -1,6 +1,6 @@
 # DODGE: Dynamic Outbreak Detection for Genomic Epidemiology
 
-DODGE is an algorithm and pipeline that identifies potential outbreak clusters (denoted investigation clusters) from large scale ongoing genomic surveillance datasets (Allele profiles from cgMLST or SNP calls). Initial clusters should be defined from a background dataset that should ideally represent existing clusters in the population being surveilled. These initial clusters are used as input into the cluster detection script proper.
+DODGE is an algorithm and pipeline that identifies potential point source outbreak clusters in bacterial pathogens (denoted investigation clusters) from large scale ongoing genomic surveillance datasets (Allele profiles from cgMLST or SNP calls). Initial clusters should be defined from a background dataset that should ideally represent existing clusters in the population being surveilled. These initial clusters are used as input into the cluster detection script proper.
 
 
 
