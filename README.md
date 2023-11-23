@@ -1,6 +1,16 @@
 # DODGE: Dynamic Outbreak Detection for Genomic Epidemiology
 
-DODGE is an algorithm and pipeline that identifies potential outbreak clusters (denoted investigation clusters) from large scale ongoing genomic surveillance datasets (Allele profiles from cgMLST or SNP calls). Initial clusters should be defined from a background dataset that should ideally represent existing clusters in the population being surveilled. These initial clusters are used as input into the cluster detection script proper.
+DODGE is an algorithm and pipeline that identifies potential point source outbreak clusters in bacterial pathogens (denoted investigation clusters) from large scale ongoing genomic surveillance datasets (Allele profiles from cgMLST or SNP calls). Initial clusters should be defined from a background dataset that should ideally represent existing clusters in the population being surveilled. These initial clusters are used as input into the cluster detection script proper.
+
+## Installation
+
+### conda
+
+update once on bioconda
+
+### dependencies
+
+update once finalised
 
 ## Installation
 
@@ -73,7 +83,7 @@ A clusters file will be produced by either a --background_data run or a normal r
 
 Tab delimited file containing all information on assigned investigation clusters
 
-columns as follows:
+**columns as follows:**
 * ID - internal arbitrary id used within DODGE
 * mgtid	- ID reported for outbreak clusters using nomenclature (for MGT or hierCC)
 * Level	- genetic threshold of cluster
@@ -86,18 +96,19 @@ columns as follows:
 * status - status of that cluster (new, expanded, unchanged)
 * Investigation	- Boolean. Whether cluster has been identified as investigation
 
+
 ### _all_clusters.txt file
 
-Tab delimited file containing all necessary information from existing clusters (investigation and not) from all isolates in the current run
+**Tab delimited file containing all necessary information from existing clusters (investigation and not) from all isolates in the current run**
 
-columns are identical to _investigation_clusters.txt with the addition of:
+**columns are identical to _investigation_clusters.txt with the addition of:**
 * contains - clusters with lower genetic threshold level that this cluster contains
 * partof - clusters with higher genetic threshold level that this cluster is a part of
 
 ### _isolate_information.txt file
 
-Tab delimited file containing information for each isolate.
-columns are identical to input metadata file with the addition of the following:
+**Tab delimited file containing information for each isolate.**
+**columns are identical to input metadata file with the addition of the following:**
 
 * 0cluster - internal cluster id that this strain is in at 0 genetic distance threshold
 * 1cluster - internal cluster id that this strain is in at 1 genetic distance threshold
