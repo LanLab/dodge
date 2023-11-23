@@ -4,16 +4,6 @@ DODGE is an algorithm and pipeline that identifies potential point source outbre
 
 ## Installation
 
-### conda
-
-update once on bioconda
-
-### dependencies
-
-update once finalised
-
-## Installation
-
 ### with conda/mamba
 
 `conda install -c bioconda dodge`
