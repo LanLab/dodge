@@ -185,7 +185,7 @@ Tab delimited pairwise distance file for all isolates included in the current ru
   
 ## Examples
 
-### Example 1 - Retrospecitve analysis of two months with all available background data (Australian dataset from paper)
+### Example 1 - Retrospective analysis of two months with all available background data (Australian dataset from paper)
 
 For this example all data is already available in one set of input files (i.e. allele profiles and metadata are present for all isolates)
 
