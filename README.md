@@ -2,6 +2,25 @@
 
 DODGE is an algorithm and pipeline that identifies potential outbreak clusters (denoted investigation clusters) from large scale ongoing genomic surveillance datasets (Allele profiles from cgMLST or SNP calls). Initial clusters should be defined from a background dataset that should ideally represent existing clusters in the population being surveilled. These initial clusters are used as input into the cluster detection script proper.
 
+## Installation
+
+### with conda/mamba
+
+`conda install -c bioconda dodge`
+
+### without conda
+
+`git clone https://github.com/LanLab/dodge.git`
+
+`cd dodge`
+
+`python setup.py install`
+
+**Note following dependencies must be installed**
+
+* scikit-learn
+* pandas
+
 ## Inputs
 
 ### Genetic difference data (cgMLST allele profiles OR SNP data from snippy)
@@ -165,35 +184,35 @@ Tab delimited pairwise distance file for all isolates included in the current ru
   
 ## Examples
 
-### Example 1 - Retrospecitve analysis of two months with 1 year background
+### Example 1 - Retrospecitve analysis of two months with all available background data (Australian dataset from paper)
 
 For this example all data is already available in one set of input files (i.e. allele profiles and metadata are present for all isolates)
 
 **Step 1** - run dodge with `--background_data` flag on the 1 year of background data
 
-    dodge -a allele_profile_file.txt --inputtype allele -s strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2021-01-01 --enddate 2021-12-31 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge --background_data
+    dodge -a examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix_ -n 8  --enddate 2016-12-31 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge --background_data
 
-This command will identify all isolates within the date range specified (`--startdate 2021-01-01` `--enddate 2021-12-31`) and produce three outputs:
-* background_pairwise_distances.txt
-* background_all_clusters.txt
-* background_isolate_information.txt
+This command will identify all isolates befire date specified (`--enddate 2021-12-31`) and produce three outputs:
+* prefix_background_pairwise_distances.txt
+* prefix_background_all_clusters.txt
+* prefix_background_isolate_information.txt
 
 **Step 2** - run dodge on the two months to be analysed
 
-    dodge -a allele_profile_file.txt --inputtype allele -s strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2022-01-01 --enddate 2022-02-28 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
+    dodge -a examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2017-01-01 --enddate 2017-02-28 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
 
 This command will check the number of time segments (`--timesegment week`) that are between the specified start and end dates. For this example 9 weeks at least partially fall within the 2 months specified (`--startdate 2022-01-01` `--enddate 2022-02-28`). dodge will internally run 9 sequential runs on one week of isolates at a time. This will produce 9 sets of 4 files with each week producing:
 
 * _pairwise_distances.txt
 * _all_clusters.txt
 * _isolate_information.txt
-* _investigation_clusters.txt
+* _investigation_clusters.txt (if any are called)
 
 The final outputs will be the files named with the last of the 9 weeks:
-* prefix_2022-02-26_2022-03-04_pairwise_distances.txt
-* prefix_2022-02-26_2022-03-04_all_clusters.txt
-* prefix_2022-02-26_2022-03-04_isolate_information.txt
-* **prefix_2022-02-26_2022-03-04_investigation_clusters.txt**
+* prefix_2017-02-26_2017-03-04_pairwise_distances.txt
+* prefix_2017-02-26_2017-03-04_all_clusters.txt
+* prefix_2017-02-26_2017-03-04_isolate_information.txt
+* **prefix_2017-02-26_2017-03-04_investigation_clusters.txt**
 
 For most cases the investigation_clusters file from the final week (bold above) will provide sufficient information.
 
@@ -229,11 +248,11 @@ If investigation clusters are identified then a fourth file will be generates
 
 Outputs will be as per the first month but named for the month they represent.
 
-## Generating pairwise distances only with scripts/pairwise_dist.py
+## Generating pairwise distances only with dodgedists
 
 This script only runs the distance matrix generation component of dodge. Inputs files are the same as dodge except no strain metadata file is required. Output of this script can be passed to dodge to reduce running time of the main dodge script.
 
-`pairwise_dist.py [-h] -i VARIANT_DATA --inputtype {snp,allele} --output OUTPUT [-d DISTANCES] [-n NO_CORES] [-m MAX_MISSMATCH] [--useref] [--mask MASK] [--snpqual SNPQUAL]
+`dodgedists [-h] -i VARIANT_DATA --inputtype {snp,allele} --output OUTPUT [-d DISTANCES] [-n NO_CORES] [-m MAX_MISSMATCH] [--useref] [--mask MASK] [--snpqual SNPQUAL]
                         [--enterobase_data]`
 
 `-h`, `--help `           show help

@@ -2,7 +2,6 @@ from time import sleep as sl
 import argparse
 from sklearn.cluster import AgglomerativeClustering
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import time
 import itertools
@@ -16,6 +15,9 @@ import glob
 import calendar
 
 from multiprocessing import Pool
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 class isolateOb:
@@ -837,7 +839,7 @@ def run_agglom_cluster(args,idlist,distancedf,id_to_strain,strain_to_st):
 
     print("\n\nCalculating cluster distance")
 
-    print("distances: ",distances)
+    # print("distances: ",[x-1 for x in distances])
     ## run agglomerative clustering (single linkage)
     for dist in distances:
         clusters = AgglomerativeClustering(n_clusters=None,distance_threshold=dist,metric="precomputed", linkage="single").fit_predict(distancedf)
@@ -881,7 +883,7 @@ def make_strains(args):
     straininfodict = {}
     strainobjdict = {}
     odc10_to_strains = {}
-    with open(args.straininfo, 'r') as read_obj:
+    with open(args.strainmetadata, 'r') as read_obj:
         csv_reader = reader(read_obj,delimiter="\t")
         straininfo = list(csv_reader)
         header = straininfo[0]
@@ -1080,7 +1082,7 @@ def get_start_end(args,strainobjdict,prevcluster):
 
 def get_background_strains(args,strainobjdict,prevcluster={}):
     startdate, enddate = get_start_end(args, strainobjdict, prevcluster)
-    print(startdate,enddate)
+    # print(startdate,enddate)
     strainls = []
     for strain in strainobjdict:
         strainob = strainobjdict[strain]
@@ -1237,10 +1239,10 @@ def make_clusters(args,strain_to_cluster,distance_df,strainobjdict,strain_to_st)
                             clust.contains[l] = [strainclust]
                             if len(clust.strains) < len(strainclust.strains):
                                 print(f"clustering problem2 subcluster {strainclust} within current cluster {clust} has more strains")
-                                print(clust)
-                                print(strainclust)
-                                print(l)
-                                print(clusterlev)
+                                # print(clust)
+                                # print(strainclust)
+                                # print(l)
+                                # print(clusterlev)
                                 sl(1)
                         else:
                             if strainclust not in clust.contains[l]:
@@ -1617,7 +1619,7 @@ def writeout_isolates(args,clusters,strain_2_cluster):
     diseasecol = ""
 
 
-    with open(args.straininfo, 'r') as read_obj:
+    with open(args.strainmetadata, 'r') as read_obj:
         csv_reader = reader(read_obj,delimiter="\t")
         straininfo = list(csv_reader)
         header = straininfo[0]
@@ -1669,7 +1671,7 @@ def writeout_isolates(args,clusters,strain_2_cluster):
             if "Host disease" in colname:
                 diseasecol = col
         metacols = [countrycol,continentcol,statecol,postcodecol,datecol,monthcol,yearcol,sourcecol,typecol,hostcol,diseasecol]
-        print(metacols)
+        # print(metacols)
         if isolatecol != "":
             for row in straininfo[1:]:
                 straininfodict[row[isolatecol]] = row
@@ -1785,13 +1787,13 @@ def parseargs():
     dateranges = parser.add_argument_group('Date / time options')
 
     dateranges.add_argument("--startdate",
-                        help="start date for new cluster analysis (format YYYY-MM-DD) if left blank earliest date not in inclusters will be identified from strain metadata")
+                        help="start date for new cluster analysis (format YYYY-MM-DD if timesegment = week or YYYY-MM if timesegment = month) if left blank earliest date not in inclusters will be identified from strain metadata")
     dateranges.add_argument("--enddate",
                         help="end date for new cluster analysis (format YYYY-MM-DD) if left blank latest date in input metadata will be used")
     dateranges.add_argument("--timesegment",
-                        help="time segment to perform analysis. every month or every week", choices=["week","month"], default="month")
+                        help="time segment to perform analysis. every month or every week", choices=["week","month"], default="week")
     dateranges.add_argument("-t", "--timewindow", help="time period a cluster must fall into to be called as investigation"
-                                                       " --outbreakmethod topdown or --outbreakmethod twostage only"
+                                                       " --outbreakmethod dodge only"
                                                        " --timesegment week default 28"
                                                        " --timesegment month default 2", type=int)
 
@@ -1829,7 +1831,7 @@ def parseargs():
     # print(args.dist_limits)
     # print(distances)
     if args.max_missmatch <= max(distances):
-        args.max_missmatch = max(distances)+1
+        args.max_missmatch = max(distances)+10
 
     if args.timesegment == "week":
         if not args.timewindow:
@@ -1895,7 +1897,7 @@ def main():
 
     # for each time period defined in analysis groups run full clustering and file output production
     for pos,group in enumerate(analysis_groups):
-        print(f"start group {group} --- {time.time() - starttime} seconds ---")
+        print(f"start group {group[0]}, {len(group[1])} isolates --- {time.time() - starttime} seconds ---")
         starttime = time.time()
         groupname = group[0]
         strainls = group[1]
@@ -1920,14 +1922,14 @@ def main():
         if len(toprocess) == 0:
             continue
 
-        print("\n##############\nStarting analysis for {} on {} isolates".format(groupname,len(toprocess)))
+        print(f"\n##############\nStarting analysis for {groupname} on {len(toprocess)} isolates")
 
         # output files for current period
         args.distancesout = args.outputPrefix + "_" + groupname + "_pairwise_distances.txt"
         args.clusters_out = args.outputPrefix + "_" + groupname + "_all_clusters.txt"
         args.investigation_out = args.outputPrefix + "_" + groupname + "_investigation_clusters.txt"
         args.isolates_out = args.outputPrefix + "_" + groupname + "_isolate_information.txt"
-        print(f"group {group} setup --- {time.time() - starttime} seconds ---")
+        # print(f"{time.time() - starttime} seconds ---")
         starttime = time.time()
 
         if args.inputtype == "snp":
@@ -1949,7 +1951,7 @@ def main():
             #   strain_to_st = {strain:ST}
         else:
             sys.exit("input type is not one of 'snp' or 'allele'")
-        print(f"group {group} diffdata import --- {time.time() - starttime} seconds ---")
+        print(f"group {group[0]} diffdata import, {len(group[1])} isolates  --- {time.time() - starttime} seconds ---")
         starttime = time.time()
 
         if args.outbreakmethod == "dodge" and not args.background_data:
@@ -2101,7 +2103,7 @@ def main():
                 #             merged_clusters[level][oldcluster + "_2"] = cobj
             prevcluster = merged_clusters
 
-        print("Analysis finished for for {}\n##############\n".format(groupname))
+        print("Analysis finished for {}\n##############\n".format(groupname))
 
 
 if __name__ == '__main__':

@@ -25,6 +25,6 @@ setup(name='dodge',
       packages=find_packages(),
       include_package_data=True,
       entry_points={
-          'console_scripts': ['dodge=shigeifinder.shigeifinder:main'],
+          'console_scripts': ['dodge=dodge.dodge:main','dodgedists=dodge.dodgedists:main'],
       },
       zip_safe=False)
