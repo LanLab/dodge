@@ -160,13 +160,13 @@ Tab delimited pairwise distance file for all isolates included in the current ru
 
 **Date / time options:**
 
-  `--startdate` start date for new cluster analysis (format YYYY-MM-DD) if left blank earliest date not in inclusters will be identified from strain metadata 
+  `--startdate` start date for new cluster analysis (format YYYY-MM-DD if timesegment = week or YYYY-MM if timesegment = month) if left blank earliest date not in inclusters will be identified from strain metadata 
 
   `--enddate` end date for new cluster analysis (format YYYY-MM-DD) if left blank latest date in input metadata will be used (default: None)
   
-  `--timesegment` time segment to perform analysis. every month or every week (default: month)
+  `--timesegment` time segment to perform analysis. every month or every week (default: week)
   
-`-t`, `--timewindow` time period a cluster must fall into to be called as investigation --outbreakmethod topdown or --outbreakmethod twostage only --timesegment week default 28
+`-t`, `--timewindow` time period a cluster must fall into to be called as investigation --outbreakmethod dodge only --timesegment week default 28
                         --timesegment month default 2 (default: None)
 
 **Clustering options:**
