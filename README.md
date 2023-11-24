@@ -8,6 +8,8 @@ DODGE is an algorithm and pipeline that identifies potential point source outbre
 
 `conda install -c bioconda dodge`
 
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/dodge/badges/latest_release_date.svg)](https://anaconda.org/bioconda/dodge) [![Anaconda-Server Badge](https://anaconda.org/bioconda/dodge/badges/downloads.svg)](https://anaconda.org/bioconda/dodge) [![Anaconda-Server Badge](https://anaconda.org/bioconda/dodge/badges/version.svg)](https://anaconda.org/bioconda/dodge)
+
 ### without conda
 
 `git clone https://github.com/LanLab/dodge.git`
