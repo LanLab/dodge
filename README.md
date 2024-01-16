@@ -187,13 +187,13 @@ Tab delimited pairwise distance file for all isolates included in the current ru
   
 ## Examples
 
-### Example 1 - Retrospective analysis of two months with all available background data (Australian dataset from paper)
+### Example 1 - Retrospective analysis of two months with all available background data (Australian dataset from paper included in examples folder)
 
 For this example all data is already available in one set of input files (i.e. allele profiles and metadata are present for all isolates)
 
 **Step 1** - run dodge with `--background_data` flag on the 1 year of background data
 
-    dodge -a examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix_ -n 8  --enddate 2016-12-31 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge --background_data
+    dodge -i examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix -n 8  --enddate 2016-12-31 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge --background_data
 
 This command will identify all isolates befire date specified (`--enddate 2021-12-31`) and produce three outputs:
 * prefix_background_pairwise_distances.txt
@@ -202,7 +202,7 @@ This command will identify all isolates befire date specified (`--enddate 2021-1
 
 **Step 2** - run dodge on the two months to be analysed
 
-    dodge -a examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2017-01-01 --enddate 2017-02-28 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
+    dodge -i examples/example_aus_2month_w_background_alleleprofile.txt --inputtype allele -s examples/example_aus_2month_w_background_metadata.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2017-01-01 --enddate 2017-02-28 --timesegment week -t 28 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
 
 This command will check the number of time segments (`--timesegment week`) that are between the specified start and end dates. For this example 9 weeks at least partially fall within the 2 months specified (`--startdate 2022-01-01` `--enddate 2022-02-28`). dodge will internally run 9 sequential runs on one week of isolates at a time. This will produce 9 sets of 4 files with each week producing:
 
@@ -219,13 +219,13 @@ The final outputs will be the files named with the last of the 9 weeks:
 
 For most cases the investigation_clusters file from the final week (bold above) will provide sufficient information.
 
-### Example 2 - Prospective analysis of 2025 months with 2023,2024 as background using months
+### Example 2 - Prospective analysis of 2025 months with 2023,2024 as background using months (hypothetical example, no input files provided)
 
 For this example the background dataset (2023 and 2024) is already available in one set of input files (i.e. allele profiles and metadata are present for all isolates) however each month of data in 2025 will be run as it is produced using the previous months output files as inputs.
 
 **Step 1** - run dodge with `--background_data` flag on the 1 year of background data
 
-    dodge -a 2023-2024_allele_profile_file.txt --inputtype allele -s 2023-2024_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2023-01 --enddate 2024-12 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge --background_data
+    dodge -i 2023-2024_allele_profile_file.txt --inputtype allele -s 2023-2024_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2023-01 --enddate 2024-12 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge --background_data
 
 This command will identify all isolates within the date range specified (`--startdate 2023-01` `--enddate 2024-12`) and produce three outputs:
 * background_pairwise_distances.txt
@@ -234,7 +234,7 @@ This command will identify all isolates within the date range specified (`--star
 
 **Step 2** - run dodge on the first month to be analysed with allele profile and metadata files containing the background AND new isolates for the current month
 
-    dodge -a 2023-2024_w_2025-01_allele_profile_file.txt --inputtype allele -s 2023-2024_w_2025-01_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2025-01 --enddate 2025-01 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
+    dodge -i 2023-2024_w_2025-01_allele_profile_file.txt --inputtype allele -s 2023-2024_w_2025-01_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2025-01 --enddate 2025-01 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge -d background_pairwise_distances.txt -c background_all_clusters.txt
 
 This command will identify all isolates within the date range specified (`--startdate 2023-01` `--enddate 2024-12`) and produce three outputs:
 * prefix_2025-01_pairwise_distances.txt
@@ -247,7 +247,7 @@ If investigation clusters are identified then a fourth file will be generates
 
 **Steps 3 to 25** - run dodge on the subsequent months to be analysed with allele profile and metadata files containing the background, previous months AND new isolates for the current month
 
-    dodge -a background+current_and_previous_months_allele_profile_file.txt --inputtype allele -s background+current_and_previous_months_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2025-02 --enddate 2025-02 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge -d prefix_2025-01_pairwise_distances.txt -c prefix_2025-01_all_clusters.txt
+    dodge -i background+current_and_previous_months_allele_profile_file.txt --inputtype allele -s background+current_and_previous_months_strain_metadata_file.txt --outputPrefix /path/to/output_folder/prefix -n 8  --startdate 2025-02 --enddate 2025-02 --timesegment month -t 2 -l 1-5 --outbreakmethod dodge -d prefix_2025-01_pairwise_distances.txt -c prefix_2025-01_all_clusters.txt
 
 Outputs will be as per the first month but named for the month they represent.
 
