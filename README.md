@@ -18,7 +18,7 @@ DODGE is an algorithm and pipeline that identifies potential point source outbre
 
 `cd dodge`
 
-`python setup.py install`
+`pip install .`
 
 **Note following dependencies must be installed manually if not using conda**
 
