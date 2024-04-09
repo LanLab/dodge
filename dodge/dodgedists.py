@@ -121,7 +121,7 @@ def import_allele_data(args,hasdistance):
         col = line.split("\t")
         strainid = col[strain]
         if strainid not in profs and col[st] != "":
-            noneg = ["0" if x in ['0', '', "-"] else x for x in col[profstart:]]
+            noneg = ["0" if x in ['0', "", "-",'""',"''"] else x for x in col[profstart:]]
             noneg = [unneg(x) for x in noneg]
             profs[strainid] = noneg
             st_to_strain[col[st]] = [str(strainid)]

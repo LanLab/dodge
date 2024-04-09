@@ -1,0 +1,12 @@
+name: dodge_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  - python >=3.8
+  - pip
+  - pandas >=1.3
+  - scikit-learn >=1.0
+  - dodge

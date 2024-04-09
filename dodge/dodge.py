@@ -49,7 +49,7 @@ class isolateOb:
         return "Name:{}, Date:{}, Month: {}, Year: {}, new?: {}, investigation: {}, partof: {}, mgtids: {}".format(self.name,self.date,self.month,self.year,self.new,self.investigation,str(self.partof),str(self.mgtid_dict))
 
 class clusterOb:
-    def __init__(self, level,id,mgtid="",investigation=False):
+    def __init__(self, level,id,mgtid="",investigation=False,investigation_date=""):
         self.id = id
         if mgtid == "":
             self.mgtid = ""
@@ -67,6 +67,9 @@ class clusterOb:
         self.distmatrix = ""
         self.pairwisemaxdistance = ""
         self.prevclusters = []
+        self.merged = []
+        self.investigation_date = investigation_date
+        self.nomenclatureid = ""
 
     def __str__(self):
         if self.size == 0:
@@ -141,35 +144,74 @@ class clusterOb:
             self.distmatrix.columns = self.strains
             self.pairwisemaxdistance = self.distmatrix.values.max()
 
-    def make_mgtid(self,nextint):
-
+    def make_nomenid(self,allinvestids,args):
         # calculate cluster ID from largest MGT level with all the same ST
-        mgtcounts = OrderedDict()
+        nomencounts = OrderedDict()
         for strain in self.strains:
-            for mgtlevel in strain.mgtid_dict:
-                st = strain.mgtid_dict[mgtlevel]
-                if mgtlevel not in mgtcounts:
-                    mgtcounts[mgtlevel] = [st]
+            for nlevel in strain.mgtid_dict:
+                st = strain.mgtid_dict[nlevel]
+                if nlevel not in nomencounts:
+                    nomencounts[nlevel] = [st]
                 else:
-                    mgtcounts[mgtlevel].append(st)
-        if mgtcounts:
-            newid = str(self.mgtid)
-            for level in mgtcounts:
-                lev_sts = mgtcounts[level]
+                    nomencounts[nlevel].append(st)
+
+        if self.investigation_date.count("-") == 1:
+            datetoadd = str(self.investigation_date[2:].replace("-", ""))
+        elif self.investigation_date.count("_") == 1:
+            datetoadd = str(self.investigation_date[2:7].replace("-", ""))
+
+        if args.enterobase_data:
+            nomen_levels = list(nomencounts.keys())
+            nomen_levels = sorted(nomen_levels, key=lambda x: int(x.replace("HC", "")), reverse=True)
+        else:
+            nomen_levels = list(nomencounts.keys())
+            nomen_levels = sorted(nomen_levels, key=lambda x: int(x.replace("MGT", "")))
+        nomenid = ""
+        if nomencounts:
+            for level in nomen_levels:
+
+                lev_sts = nomencounts[level]
                 num_sts = len(list(set(lev_sts)))
+
                 if num_sts == 1:
-                    newid = "{} ST{}".format(level,mgtcounts[level][0])
+                    nomenid = nomencounts[level][0]
+                    if args.enterobase_data:
+                        nomenid = f"{level} {nomenid}"
+                    else:
+                        nomenid = f"{level} ST{nomenid}"
                 elif num_sts > 1:
                     topst,topst_freq = most_frequent(lev_sts)
                     if topst_freq > 0.70:
-                        newid = "{} ST{}".format(level, topst)
+                        nomenid = topst
+                        if args.enterobase_data:
+                            nomenid = f"{level} {nomenid}"
+                        else:
+                            nomenid = f"{level} ST{nomenid}"
 
-            self.mgtid = str(newid)
+        if args.nonomenclatureinid:
+            newid = f"{self.level}:{datetoadd}"
         else:
-            self.mgtid = str(nextint)
-        return self.mgtid
+            if nomenid == "":
+                newid = f"{self.level}:{datetoadd}"
+            else:
+                newid = f"{nomenid}:{self.level}:{datetoadd}"
 
-    def make_hierccid(self,nextint):
+        nocounts = [":".join(x.split(":")[:-1]) for x in allinvestids]
+        if newid in nocounts:
+            noswmatch = [x.split(":")[-1] for x in allinvestids if ":".join(x.split(":")[:-1]) == newid]
+            nextid = max(map(int, noswmatch)) + 1
+            newid = newid + ":" + str(nextid)
+        else:
+            newid = newid + ":1"
+        self.mgtid = newid
+        self.nomenclatureid = nomenid
+        allinvestids.append(newid)
+        if newid.startswith("MGT7 ST111:2:1702"):
+            print(newid)
+        return self.mgtid,allinvestids
+
+    def make_hierccid(self,nextint,allinvestids,args):
+        # TODO seems to fail to use HC properly
         # calculate cluster ID from largest MGT level with all the same ST
         hcccounts = OrderedDict()
         for strain in self.strains:
@@ -181,29 +223,49 @@ class clusterOb:
                     hcccounts[hcclevel].append(st)
         hiercc_levels = list(hcccounts.keys())
         hiercc_levels = sorted(hiercc_levels,key=lambda x:int(x.replace("HC","")),reverse=True)
-        if hcccounts:
+        if hcccounts and not args.nonomenclatureinid:
             newid = str(self.mgtid)
+            if self.investigation_date.count("-") == 1:
+                datetoadd = self.investigation_date[2:].replace("-", "")
+            elif self.investigation_date.count("_") == 1:
+                datetoadd = self.investigation_date[2:7].replace("-", "")
             for level in hiercc_levels:
                 lev_cs = hcccounts[level]
                 num_cs = len(list(set(lev_cs)))
                 if num_cs == 1:
-                    newid = "{} {}".format(level,hcccounts[level][0])
+                    newid = f"{level} {hcccounts[level][0]}:{self.level}:{datetoadd}"
+                    # newid = "{} {}".format(level,hcccounts[level][0])
+                    nocounts = [":".join(x.split(":")[:-1]) for x in allinvestids]
+                    if newid in nocounts:
+                        noswmatch = [x.split(":")[-1] for x in allinvestids if ":".join(x.split(":")[:-1]) == newid]
+                        nextid = max(map(int, noswmatch)) + 1
+                        newid = newid + ":" + str(nextid)
+                    else:
+                        newid = newid + ":1"
                 elif num_cs> 1:
                     topst,topst_freq = most_frequent(lev_cs)
                     if topst_freq > 0.70:
-                        newid = "{} {}".format(level, topst)
+                        # newid = "{} {}".format(level, topst)
+                        newid = f"{level} {topst}:{self.level}:{datetoadd}"
+                        nocounts = [":".join(x.split(":")[:-1]) for x in allinvestids]
+                        if newid in nocounts:
+                            noswmatch = [x.split(":")[-1] for x in allinvestids if ":".join(x.split(":")[:-1]) == newid]
+                            nextid = max(map(int,noswmatch))+1
+                            newid = newid + ":" + str(nextid)
+                        else:
+                            newid = newid+":1"
 
             self.mgtid = str(newid)
         else:
             self.mgtid = str(nextint)
-        return self.mgtid
+        return self.mgtid,allinvestids
 
 
 
     def write(self, path,args):
         if not os.path.isfile(path):
             outf = open(path, "w")
-            outf.write("ID\tmgtid\tLevel\tSize\tMax distance\tTimespan\tMindate\tMaxdate\tStrains\tstatus\tInvestigation\tcontains\tpartof\n")
+            outf.write("ID\tCluster_ID\tGenomic Nomenclature ID\tLevel\tSize\tMax distance\tTimespan\tMindate\tMaxdate\tStrains\tstatus\tInvestigation\tInvestigation_called\tcontains\tpartof\tmergedwith\n")
         else:
             outf = open(path, "a+")
 
@@ -229,11 +291,18 @@ class clusterOb:
             maxd = dateobjmax
 
         strainids = [x.name for x in self.strains]
-        partof = [str(self.partof[level])+":"+str(level) for level in self.partof]
-        contains = [str(self.contains[level]) + ":" + str(level) for level in self.contains]
-        outf.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+        partof = [self.partof[level] for level in self.partof]
+        partofclusterids = ";".join([str(partofclust.level) + ":" + str(partofclust.id) for partofclust in partof])
+        contains = [self.contains[level] for level in self.contains]
+        containsclusterids = [",".join([str(containstclust.level) + ":" + str(containstclust.id) for containstclust in l]) for l in contains]
+        containsclusterids = ",".join([x for x in containsclusterids if x !=""])
+        merged = [str(x.id) for x in self.merged]
+        # merged = list(set(merged))
+        mergedwith = ",".join(merged)
+        outf.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
             self.id,
             self.mgtid,
+            self.nomenclatureid,
             self.level,
             self.size,
             self.pairwisemaxdistance,
@@ -244,16 +313,17 @@ class clusterOb:
             ",".join(strainids),
             self.status,
             str(self.investigation),
-            contains,
-            partof)
-        )
+            self.investigation_date,
+            containsclusterids,
+            partofclusterids,
+            mergedwith))
         outf.close()
 
     def writesummary(self, path,args):
         strainids = [x.name for x in self.strains]
         if not os.path.isfile(path):
             outf = open(path, "w")
-            outf.write("ID\tMGTID\tLevel\tSize\tMax distance\tTimespan\tMindate\tMaxdate\tStrains\tstatus\tInvestigation\n")
+            outf.write("Cluster_ID\tGenomic Nomenclature ID\tLevel\tSize\tMax distance\tTimespan\tMindate\tMaxdate\tStrains\tstatus\tInvestigation\tInvestigation called\tmerged with\n")
         else:
             outf = open(path, "a+")
 
@@ -279,12 +349,17 @@ class clusterOb:
             maxd = dateobjmax
         # if self.mgtid == "MGT9 ST50288":
         #     sl(1)
-        outf.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(self.id,self.mgtid, self.level, self.size,
-                                                                 self.pairwisemaxdistance, timespan,
-                                                                 mind,
-                                                                 maxd,
-                                                                 ",".join(strainids),
-                                                                 self.status,str(self.investigation)))#, ",".join(olds)))
+
+        # partof = [self.partof[level] for level in self.partof]
+        # partofclusterids = ",".join([str(partofclust.mgtid) for partofclust in partof if partofclust.investigation])
+        # contains = [self.contains[level] for level in self.contains]
+        # containsclusterids = [",".join([str(containstclust.mgtid) for containstclust in l if containstclust.investigation]) for l in contains]
+        # containsclusterids = ";".join([x for x in containsclusterids if x !=""])
+        merged = [str(x.mgtid) for x in self.merged if x.investigation]
+        # merged = list(set(merged))
+        mergedwith = ",".join(merged)
+        strains = ",".join(strainids)
+        outf.write(f"{self.mgtid}\t{self.nomenclatureid}\t{self.level}\t{self.size}\t{self.pairwisemaxdistance}\t{timespan}\t{mind}\t{maxd}\t{strains}\t{self.status}\t{str(self.investigation)}\t{str(self.investigation_date)}\t{mergedwith}\n")#\t{containsclusterids}\t{partofclusterids}\t{mergedwith}\n")
         outf.close()
 
 
@@ -490,9 +565,12 @@ def make_alignment(snpdict,genomedict,strains,args,refpos):
                 if strain in snpdict[str(pos)][mut]:
                     toadd = mut[1]
             if toadd == "":
-                if strain in genomedict:
-                    call = genomedict[strain][pos-1]
-                    toadd = call
+                if args.usegenomes:
+                    if strain in genomedict:
+                        call = genomedict[strain][pos-1]
+                        toadd = call
+                else:
+                    toadd = refpos[str(pos)]
             outalign[strain]+=toadd
         if args.useref:
             outalign["Reference"] += refpos[str(pos)]
@@ -554,18 +632,27 @@ def import_snp_data(args,strains,background_strains,hasdistance):
 
         snpdict,refpos,snpfile_present = collect_SNPs(args,strainswdata)
         print("import_snpdata: snps collected")
-
-        genomedict = get_genomes(strainswdata,args)
+        genomedict = {}
+        if args.usegenomes:
+            genomedict = get_genomes(strainswdata,args)
 
         usablestrains = []
         c=[]
         for strain in strainswdata:
-            if strain in snpfile_present and strain in genomedict.keys() and strain not in usablestrains:
-                usablestrains.append(strain)
-            elif strain in usablestrains:
-                continue
+            if args.usegenomes:
+                if strain in snpfile_present and strain in genomedict.keys() and strain not in usablestrains:
+                    usablestrains.append(strain)
+                elif strain in usablestrains:
+                    continue
+                else:
+                    c.append(strain)
             else:
-                c.append(strain)
+                if strain in snpfile_present and strain not in usablestrains:
+                    usablestrains.append(strain)
+                elif strain in usablestrains:
+                    continue
+                else:
+                    c.append(strain)
         print("import_snpdata: {} strains without genome or vcf file ({})".format(len(c),",".join(c)))
         print("import_snpdata: genomes with subs collected")
         outalign, posls = make_alignment(snpdict, genomedict, usablestrains, args, refpos)
@@ -593,23 +680,28 @@ def import_clusters(args,strainobjdict):
     inclusters = open(args.inclusters).read().splitlines()
     clusters = {}
     prevstrains = []
+    existingmgtids = []
     for line in inclusters[1:]:
         col = line.replace('"','').split("\t")
 
         mgtid = col[1]
-        lev = int(col[2])
-        size = int(col[3])
+        if mgtid != "":
+            existingmgtids.append(mgtid)
+        nomen = col[2]
+        lev = int(col[3])
+        size = int(col[4])
         ident = "old_"+str(col[0])+"_"+str(lev)
 
-        strains = col[8].split(',')
+        strains = col[9].split(',')
         prevstrains += strains
-        if col[10] == 'False':
+        if col[11] == 'False':
             invest = False
-        elif col[10] == 'True':
+        elif col[11] == 'True':
             invest = True
         else:
             invest = False
 
+        investdate = col[12]
         if lev not in clusters:
             clusters[lev] = {}
 
@@ -617,13 +709,15 @@ def import_clusters(args,strainobjdict):
         for pos in range(0,size):
             strainobj = strainobjdict[strains[pos]]
             if init:
-                clusters[lev][ident] = clusterOb(lev, ident, mgtid=mgtid, investigation=invest)
+                clusters[lev][ident] = clusterOb(lev, ident, mgtid=mgtid, investigation=invest,investigation_date=investdate)
                 clusters[lev][ident].addstrain(strainobj,{},"",{})
+                clusters[lev][ident].nomenclatureid = nomen
                 init=False
             else:
                 clusters[lev][ident].addstrain(strainobj,{},"",{})
 
-    return clusters,prevstrains
+    return clusters,prevstrains,existingmgtids
+
 
 def ident_expanded_old(oldclusters,newclusters):
 
@@ -662,6 +756,10 @@ def ident_expanded_old(oldclusters,newclusters):
 
     # for each cutoff level
     for level in oldclusters:
+        if level not in new_clust_in_old_invest:
+            new_clust_in_old_invest[level] = []
+        if level not in unchanged_oldclust:
+            unchanged_oldclust[level] = []
         # get old and new clusters
         levoldclusters = oldclusters[level]
         levnewclusters = newclusters[level]
@@ -676,23 +774,73 @@ def ident_expanded_old(oldclusters,newclusters):
                     new.investigation = True
                     new.mgtid = old.mgtid
                     new.status = "unchanged"
-                    if level not in unchanged_oldclust:
-                        unchanged_oldclust[level] = [new]
-                    else:
-                        unchanged_oldclust[level].append(new)
+                    new.investigation_date = old.investigation_date
+                    unchanged_oldclust[level].append(new)
 
                     # set new cluster to investigation, new cluster adopts old cluster id, status set to unchanged and add new cluster to unchanged list
                 elif set(new.strains).intersection(set(old.strains)) == set(old.strains):# if the set of strains in old is a subset of new
                     new.investigation = True
                     new.mgtid = old.mgtid
                     new.status = "expanded"
+                    new.investigation_date = old.investigation_date
                     # new_clust_in_old_invest.append(new)
-                    if level not in new_clust_in_old_invest:
-                        new_clust_in_old_invest[level] = [new]
-                    else:
-                        new_clust_in_old_invest[level].append(new)
+                    new_clust_in_old_invest[level].append(new)
                     # set new cluster to investigation, new cluster adopts old cluster id, status set to expanded and add new cluster to new_clust_in_old_invest list
     return new_clust_in_old_invest,unchanged_oldclust
+
+def ident_expanded_old_single_cluster(oldcluster,newclusters,newly_clustered):
+
+    """
+    at each level
+    for each new cluster
+    get list of old clusters within new
+        to do this:
+        get list of old cluster isolates + list of new cluster isolates
+        if old = investigation:
+            if new>old and intersect = old - >old expanded
+            OR
+            if new = old and intersect = old old unchanged
+
+            record old in new
+
+            if at end no old in new -> new cluster
+
+    """
+
+    new_clust_in_old_invest = []
+    unchanged_oldclust = []
+
+
+
+    for newid in newclusters:
+        new = newclusters[newid]
+        if oldcluster.investigation: # if old cluster was assigned as an investigation cluster
+            if oldcluster.strains == new.strains: # if the set of strains in old and new are the same
+                new.investigation = True
+                new.mgtid = oldcluster.mgtid
+                new.status = "unchanged"
+                new.investigation_date = oldcluster.investigation_date
+                unchanged_oldclust.append(new)
+
+                # set new cluster to investigation, new cluster adopts old cluster id, status set to unchanged and add new cluster to unchanged list
+            elif set(new.strains).intersection(set(oldcluster.strains)) == set(oldcluster.strains):# if the set of strains in old is a subset of new
+                new.investigation = True
+                new.mgtid = oldcluster.mgtid
+                new.status = "expanded"
+                new.investigation_date = oldcluster.investigation_date
+                # new_clust_in_old_invest.append(new)
+                new_clust_in_old_invest.append(new)
+                # set new cluster to investigation, new cluster adopts old cluster id, status set to expanded and add new cluster to new_clust_in_old_invest list
+                newly_clustered_strains = set(new.strains).difference(set(oldcluster.strains))
+                for strain in newly_clustered_strains:
+                    if strain not in newly_clustered:
+                        newly_clustered[strain] = [str(new.mgtid)]
+                    else:
+                        newly_clustered[strain].append(str(new.mgtid))
+                        clusterslist = ", ".join(newly_clustered[strain])
+                        print(f"strain {strain} is found in multiple investigation clusters: {clusterslist}")
+
+    return new_clust_in_old_invest,unchanged_oldclust,newly_clustered
 
 def allele_dist_metric(a,b,args):
     match = 0
@@ -745,12 +893,13 @@ def pairdist(args,pair,existids,initiald,profs):
 
     return dist
 
-def run_dist(args,profs,idlist,hasdistance,initiald,odc10_to_strains):
+def run_dist(args,profs,idlist,hasdistance,initiald):
     # get existing distances if present, also get list of strain ids
     # make empty dataframe with all current strains
 
     initiald.index = initiald.index.astype(str)
     initiald.columns = initiald.columns.astype(str)
+    # idlist = list(set(idlist))
 
     if list(set(idlist).difference(set(hasdistance))) == []:
         print("\nAll isolates found in input pairwise distances file1")
@@ -759,7 +908,7 @@ def run_dist(args,profs,idlist,hasdistance,initiald,odc10_to_strains):
         newdf = newdf.T[idlist].T
         return newdf
 
-    useodc10 = False
+
 
     exist = []
     for i in idlist:
@@ -819,6 +968,47 @@ def run_dist(args,profs,idlist,hasdistance,initiald,odc10_to_strains):
 
     return newdf
 
+def check_for_expansion(args,clustidlist,clustdistancedf,existingclust,level,strainobjdict,strain_to_st,newly_clustered,prevrunadded=['placeholder'],addedtotal=[]):
+    """
+    for each new strain in idlist
+        get pairwise distances to all prevcluster isolates
+        add any isolates that are at or below cutoff to prevcluster object
+
+        return recursion with all remaining idlist isolates that did not match and updated prevcluster object
+        break when no new isolates were added in previous recursion
+    :param args:
+    :param idlist:
+    :param distancedf:
+    :param prevcluster:
+    :return:
+    """
+    if len(prevrunadded) == 0:
+        return addedtotal,newly_clustered
+    else:
+        added_strains = []
+        existingstrains = list(existingclust.strainnames)
+        for newstrain in clustidlist:
+            for clusterstrain in existingstrains:
+                if newstrain not in addedtotal and clusterstrain != newstrain:
+                    dist = int(clustdistancedf.at[newstrain,clusterstrain])
+                    if dist <= int(level):
+                        added_strains.append(newstrain)
+                        addedtotal.append(newstrain)
+                        existingclust.addstrain(strainobjdict[newstrain], strainobjdict[newstrain].mgtid_dict, clustdistancedf,strain_to_st)
+                        if newstrain in newly_clustered:
+                            newly_clustered[newstrain].append(existingclust.id)
+                            clusterslist = ", ".join(list(map(str,newly_clustered[newstrain])))
+                            print(f"strain {newstrain} is found in multiple investigation clusters: {clusterslist}")
+                        else:
+                            newly_clustered[newstrain] = [existingclust.id]
+        remaining_strains = list(set(clustidlist).difference(set(added_strains)))
+        return check_for_expansion(args,remaining_strains,clustdistancedf,existingclust,level,strainobjdict,strain_to_st,newly_clustered,prevrunadded=added_strains,addedtotal=addedtotal)
+
+
+
+
+
+
 def run_agglom_cluster(args,idlist,distancedf,id_to_strain,strain_to_st):
     """
     get cluster assignments for each strain at different cutoffs after running agglomerative clustering
@@ -872,6 +1062,59 @@ def run_agglom_cluster(args,idlist,distancedf,id_to_strain,strain_to_st):
 def flatten(l):
     return [item for sublist in l for item in sublist]
 
+def ident_meta_columns(header,isolatename=False,enterobase=False):
+    mgtd = OrderedDict()
+    isolatecol = ""
+    datecol = ""
+    monthcol = ""
+    yearcol = ""
+    if enterobase:
+        for col in range(len(header)):
+            colname = header[col]
+            if colname == "Name":
+                isolatecol = col
+            if colname.startswith("HC"):
+                name = colname.split(" ")[0]
+                # name = "MGT" + colname[2:].replace(" 0 st", "")
+                mgtd[name] = int(col)
+            if "Collection Day" in colname:
+                datecol = col
+            if "Collection Month" in colname:
+                monthcol = col
+            if "Collection Year" in colname:
+                yearcol = col
+    else:
+        for col in range(len(header)):
+            colname = header[col]
+            if isolatename:
+                if colname == isolatename:
+                    isolatecol = col
+            else:
+                if colname.lower() in ["name", "strain", "isolate"]:
+                    isolatecol = col
+            if colname == "MGT 1":
+                name = "MGT1"
+                mgtd[name] = col
+            if colname.startswith("MGT") and "CC" not in colname:
+                mgtd[colname] = col
+            if "Date".lower() in colname.lower():
+                datecol = col
+            if "Month".lower() in colname.lower():
+                monthcol = col
+            if "Year".lower() in colname.lower():
+                yearcol = col
+    if isolatecol == "":
+        sys.exit("No Isolate Column detected in input metadata")
+    if datecol == "":
+        sys.exit("No Date Column detected in input metadata")
+    if monthcol == "":
+        sys.exit("No Month Column detected in input metadata")
+    if yearcol == "":
+        sys.exit("No Year Column detected in input metadata")
+    return isolatecol,datecol,monthcol,yearcol,mgtd
+
+
+
 def make_strains(args):
     """
 
@@ -882,46 +1125,14 @@ def make_strains(args):
     """
     straininfodict = {}
     strainobjdict = {}
-    odc10_to_strains = {}
+
+
+
     with open(args.strainmetadata, 'r') as read_obj:
         csv_reader = reader(read_obj,delimiter="\t")
         straininfo = list(csv_reader)
         header = straininfo[0]
-        mgtd = OrderedDict()
-        odc10col = ""
-        if args.enterobase_data:
-            for col in range(len(header)):
-                colname = header[col]
-                if colname == "Name":
-                    isolatecol = col
-                if colname.startswith("HC"):
-                    name = colname.split(" ")[0]
-                    # name = "MGT" + colname[2:].replace(" 0 st", "")
-                    mgtd[name] = int(col)
-                if "Collection Day" in colname:
-                    datecol = col
-                if "Collection Month" in colname:
-                    monthcol = col
-                if "Collection Year" in colname:
-                    yearcol = col
-        else:
-            for col in range(len(header)):
-                colname = header[col]
-                if colname in ["Strain","Isolate"]:
-                    isolatecol = col
-                if colname == "MGT 1":
-                    name = "MGT1"
-                    mgtd[name] = col
-                if colname == "ODC10":
-                    odc10col = col
-                if colname.startswith("MGT"):
-                    mgtd[colname] = col
-                if "Date".lower() in colname.lower():
-                    datecol = col
-                if "Month".lower() in colname.lower():
-                    monthcol = col
-                if "Year".lower() in colname.lower():
-                    yearcol = col
+        isolatecol, datecol, monthcol, yearcol, mgtd = ident_meta_columns(header,enterobase=args.enterobase_data,isolatename=args.isolatecolumn)
 
         for row in straininfo[1:]:
             strainmgtdict = OrderedDict()
@@ -933,63 +1144,34 @@ def make_strains(args):
                 date = "{}-{}-{}".format(year,month,day) ## 2014-02-25
             else:
                 date = row[datecol]
-            if odc10col != "":
-                odc10 = row[odc10col]
-                if odc10 not in odc10_to_strains:
-                    odc10_to_strains[odc10] = [strain]
-                else:
-                    odc10_to_strains[odc10].append(strain)
+                try:
+                    datetime.strptime(date, "%Y-%m-%d")
+                except:
+                    print("Date is in incorrect format, should be YYYY-MM-DD")
+
+
             straininfodict[strain] = row
             missing = False
-            for l in mgtd:
-                mgtst = straininfodict[strain][mgtd[l]]
-                noneg = str(mgtst).split(".")[0]
-                if mgtst == "":
-                    missing = True
-                strainmgtdict[l] = noneg
-            timepresent = True
-            if args.background_data:
-                if year == '' and date == '':
-                    timepresent = False
-                elif year != '' and date == '' and month == '':
-                    month = "01"
-                    date = "{}-{}-{}".format(year,month,"01") ## 2014-02-25
-                elif year != '' and date == '' and month != '':
-                    date = "{}-{}-{}".format(year, month, "01")  ## 2014-02-25
-
-                if not missing and timepresent:
-                    strainobjdict[strain] = isolateOb(strain, date, year, month, False, strainmgtdict)
+            # check if any MGT or hierCC data was detected in metadata file, if so record if that data was missing in a given strain
+            if len(mgtd.keys()) != 0:
+                for l in mgtd:
+                    mgtst = straininfodict[strain][mgtd[l]]
+                    noneg = str(mgtst).split(".")[0]
+                    if mgtst == "":
+                        missing = True
+                    strainmgtdict[l] = noneg
             else:
-                if args.timesegment == "week":
-                    if year == '' and date == '':
-                        timepresent = False
-                    elif year != '' and date == '' and month == '':
-                        month = "01"
-                        date = "{}-{}-{}".format(year, month, "01")  ## 2014-02-25
-                        if datetime.strptime(date,'%Y-%m-%d') >= datetime.strptime(args.startdate,'%Y-%m-%d'):
-                            timepresent = False
-                            sys.exit(
-                                f"strain {strain} is in non-background timeframe ({date}) but lacks complete date metadata")
-                    elif year != '' and date == '' and month != '':
-                        date = "{}-{}-{}".format(year, month, "01")  ## 2014-02-25
-                        if datetime.strptime(date,'%Y-%m-%d') >= datetime.strptime(args.startdate,'%Y-%m-%d'):
-                            timepresent = False
-                            sys.exit(
-                                f"strain {strain} is in non-background timeframe ({date}) but lacks complete date metadata")
-                elif  args.timesegment == "month":
-                    if date == '' and month == '' and year != '':
-                        date = "{}-{}".format(year, "01")  ## 2014-02-25
-                        if datetime.strptime(date,'%Y-%m') >= datetime.strptime(args.startdate,'%Y-%m'):
-                            timepresent = False
-                            sys.exit(f"strain {strain} is in non-background timeframe ({date}) but lacks sufficient month and year metadata")
-                    elif date == '' and month == '' and year == '':
-                        timepresent = False
-                        sys.exit(
-                            f"strain {strain} is in non-background timeframe ({date}) but lacks sufficient month and year metadata")
+                missing = False
 
-                if not missing and timepresent:
-                    strainobjdict[strain] = isolateOb(strain,date,year,month,False,strainmgtdict)
-    return strainobjdict,odc10_to_strains
+            timepresent = True
+            if args.timesegment == "week" and date == '':
+                timepresent = False
+            elif args.timesegment == "month" and month == '':
+                timepresent = False
+
+            if not missing and timepresent:
+                strainobjdict[strain] = isolateOb(strain,date,year,month,False,strainmgtdict)
+    return strainobjdict
 
 def get_newest_strain_date(straindict):
     newest = datetime.strptime('1000-01-01', '%Y-%m-%d')
@@ -1082,7 +1264,7 @@ def get_start_end(args,strainobjdict,prevcluster):
 
 def get_background_strains(args,strainobjdict,prevcluster={}):
     startdate, enddate = get_start_end(args, strainobjdict, prevcluster)
-    # print(startdate,enddate)
+    print(startdate,enddate)
     strainls = []
     for strain in strainobjdict:
         strainob = strainobjdict[strain]
@@ -1090,6 +1272,7 @@ def get_background_strains(args,strainobjdict,prevcluster={}):
             if strainob.date:
                 if strainob.date >= startdate and strainob.date <= enddate:
                     strainls.append(strainob.name)
+                    print(strainob.name)
             else:
                 strainls.append(strainob.name)
         elif args.timesegment == "month":
@@ -1217,6 +1400,8 @@ def make_clusters(args,strain_to_cluster,distance_df,strainobjdict,strain_to_st)
 
                         c.addstrain(strainobj, strainobj.mgtid_dict, distance_df, strain_to_st)
                         strainobj.partof[clusterlev] = c
+                # if strain in ["SRR1960234","SRR1963441","SRR1963248"]:
+                #     sl(1)
 
 
     # uncomment below to check for clustering problems
@@ -1231,7 +1416,7 @@ def make_clusters(args,strain_to_cluster,distance_df,strainobjdict,strain_to_st)
                             clust.partof[l] = strainobj.partof[l]
                             if len(clust.strains) > len(strainobj.partof[l].strains):
                                 print(f"clustering problem1 - strains in cluster {clust} are not recorded in clusters with larger cutoff {strainobj.partof[l]}")
-                                sl(1)
+                                # sl(1)
 
                     elif l < clusterlev:
                         strainclust = strainobj.partof[l]
@@ -1243,13 +1428,13 @@ def make_clusters(args,strain_to_cluster,distance_df,strainobjdict,strain_to_st)
                                 # print(strainclust)
                                 # print(l)
                                 # print(clusterlev)
-                                sl(1)
+                                # sl(1)
                         else:
                             if strainclust not in clust.contains[l]:
                                 clust.contains[l].append(strainclust)
                                 if len(clust.strains) < len(strainclust.strains):
                                     print(f"clustering problem3  sub cluster{strainclust} within current cluster {clust} has more strains in second or later subcluster in same cluster")
-                                    sl(1)
+                                    # sl(1)
 
 
     return clusters
@@ -1319,7 +1504,7 @@ def get_init_clusters(args,clusters,initlevel):
                     outc.append(cluster)
     return outc
 
-def get_topdown_invest_clusters_week(args,prevclusters,clusters,distances,currpos,out):
+def get_topdown_invest_clusters_week(args,prevclusters,clusters,distances,currpos,out,existingmgtids):
     """
 
     :param args:
@@ -1387,9 +1572,9 @@ def get_topdown_invest_clusters_week(args,prevclusters,clusters,distances,currpo
         return out2
     else:
         # run next distance
-        return get_topdown_invest_clusters_week(args,passtonext,clusters,distances,currpos-1,out)
+        return get_topdown_invest_clusters_week(args,passtonext,clusters,distances,currpos-1,out,existingmgtids)
 
-def get_topdown_invest_clusters_month(args,prevclusters,clusters,distances,currpos,out):
+def get_topdown_invest_clusters_month(args,prevclusters,clusters,distances,currpos,out,existingmgtids):
     print("Processing {} distance clusters".format(currpos))
     currlevclusters = list(clusters[currpos].values())
     cluster_to_check = []
@@ -1425,23 +1610,109 @@ def get_topdown_invest_clusters_month(args,prevclusters,clusters,distances,currp
                 out2.append(i)
         return out2
     else:
-        return get_topdown_invest_clusters_month(args,passtonext,clusters,distances,currpos-1,out)
+        return get_topdown_invest_clusters_month(args,passtonext,clusters,distances,currpos-1,out,existingmgtids)
 
 
-def ident_additional_isolates(prevcluster,new_strains,idlist):
+def ident_new_isolates(new_strains,strainobjdict,groupname,args):
 
-    investigation_cluster_strains = []
-    for distance in prevcluster:
-        for cluster in prevcluster[distance]:
-            clusterobj = prevcluster[distance][cluster]
-            if clusterobj.investigation == True:
-                clusterstrainids = [x.name for x in clusterobj.strains]
-                investigation_cluster_strains += clusterstrainids
-    strainstocluster = investigation_cluster_strains + new_strains
-    strainstocluster = [x for x in strainstocluster if x not in idlist]
-    strainstoclusterout = []
-    [strainstoclusterout.append(x) for x in strainstocluster if x not in strainstoclusterout]
-    return strainstoclusterout
+    #TODO only include isolates within current 4 week window for further analysis
+    # use groupname (date) - 4 weeks or 2 months
+    # strainobjdict to get each strain isolation date and check if in above timeframe
+
+
+
+
+    datethreshold = ""
+    if args.timesegment == "week":
+        dateformat = "%Y-%m-%d"
+        startdate = groupname.split("_")[0]
+        datethreshold = datetime.strptime(startdate, dateformat) - timedelta(days=28)
+    elif args.timesegment == "month":
+        dateformat = "%Y-%m"
+        d1 = datetime.strptime(groupname, dateformat)
+        datethreshold = d1.replace(day=1) - timedelta(days=33)
+    new_strains_in_date = []
+    strains_too_old = []
+    for strain in new_strains:
+        strainobj = strainobjdict[strain]
+        if args.timesegment == "week":
+            dateformat = "%Y-%m-%d"
+            # straintime = datetime.strftime(strainobj.date,dateformat)
+            if strainobj.date >= datethreshold:
+                new_strains_in_date.append(strain)
+            else:
+                strains_too_old.append(strain)
+        elif args.timesegment == "month":
+            dateformat = "%Y-%m"
+            straintime = strainobj.monthdate.replace(day=1)
+            if straintime > datethreshold:
+                new_strains_in_date.append(strain)
+            else:
+                strains_too_old.append(strain)
+    return new_strains_in_date,strains_too_old
+    # investigation_cluster_strains = {}
+    # for distance in prevcluster:
+    #     investigation_cluster_strains[distance] = {}
+    #     for cluster in prevcluster[distance]:
+    #         clusterobj = prevcluster[distance][cluster]
+    #         if clusterobj.investigation == True:
+    #             clusterstrainids = [x.name for x in clusterobj.strains]
+    #             investigation_cluster_strains[distance][clusterobj.name] = clusterstrainids + new_strains_in_date
+    #
+    # # strainstocluster = investigation_cluster_strains + new_strains_in_date
+    # # strainstocluster = [x for x in strainstocluster if x not in idlist]
+    # # strainstoclusterout = []
+    # # [strainstoclusterout.append(x) for x in strainstocluster if x not in strainstoclusterout]
+    # return investigation_cluster_strains,strains_too_old
+
+# def ident_additional_isolates(prevcluster,new_strains,idlist,strainobjdict,groupname,args):
+#
+#     #TODO only include isolates within current 4 week window for further analysis
+#     # use groupname (date) - 4 weeks or 2 months
+#     # strainobjdict to get each strain isolation date and check if in above timeframe
+#
+#
+#
+#     investigation_cluster_strains = []
+#     for distance in prevcluster:
+#         for cluster in prevcluster[distance]:
+#             clusterobj = prevcluster[distance][cluster]
+#             if clusterobj.investigation == True:
+#                 clusterstrainids = [x.name for x in clusterobj.strains]
+#                 investigation_cluster_strains += clusterstrainids
+#     datethreshold = ""
+#     if args.timesegment == "week":
+#         dateformat = "%Y-%m-%d"
+#         startdate = groupname.split("_")[0]
+#         datethreshold = datetime.strptime(startdate, dateformat) - timedelta(days=28)
+#     elif args.timesegment == "month":
+#         dateformat = "%Y-%m"
+#         d1 = datetime.strptime(groupname, dateformat)
+#         datethreshold = d1.replace(day=1) - timedelta(days=33)
+#     new_strains_in_date = []
+#     strains_too_old = []
+#     for strain in new_strains:
+#         strainobj = strainobjdict[strain]
+#         if args.timesegment == "week":
+#             dateformat = "%Y-%m-%d"
+#             straintime = datetime.strptime(strainobj.date,dateformat)
+#             if straintime >= datethreshold:
+#                 new_strains_in_date.append(strain)
+#             else:
+#                 strains_too_old.append(strain)
+#         elif args.timesegment == "month":
+#             dateformat = "%Y-%m"
+#             straintime = strainobj.monthdate.replace(day=1)
+#             if straintime > datethreshold:
+#                 new_strains_in_date.append(strain)
+#             else:
+#                 strains_too_old.append(strain)
+#
+#     strainstocluster = investigation_cluster_strains + new_strains_in_date
+#     strainstocluster = [x for x in strainstocluster if x not in idlist]
+#     strainstoclusterout = []
+#     [strainstoclusterout.append(x) for x in strainstocluster if x not in strainstoclusterout]
+#     return strainstoclusterout,strains_too_old
 
 def get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,prevstrains,strains_missing_inputs):
     remove = []
@@ -1458,7 +1729,38 @@ def get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,
     [outids2.append(x) for x in outids if x not in outids2]
     return outids2
 
-def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust):
+
+def get_non_overlapping_pairs(datalen):
+  """
+  Finds non-overlapping pairs of indexes in a list.
+
+  Args:
+      data: The input list.
+
+  Returns:
+      A list of tuples representing non-overlapping pairs of indexes.
+  """
+  result = []
+  for i in range(datalen):
+    for j in range(i + 1, datalen):
+      if i != j:  # Exclude self-pairs
+        result.append((i, j))
+  return result
+
+# def ident_investigation_merges(expanded_invest_clusters):
+#     for level in expanded_invest_clusters:
+#         pairls = get_non_overlapping_pairs(len(expanded_invest_clusters[level]))
+#         for pair in pairls:
+#             c1 = expanded_invest_clusters[level][pair[0]]
+#             c2 = expanded_invest_clusters[level][pair[1]]
+#             c1isolates = set(c1.strainnames)
+#             c2isolates = set(c2.strainnames)
+#             if len(c1isolates.intersection(c2isolates)) > 0:
+#                     c1.merged.append(c2)
+#                     c2.merged.append(c1)
+
+
+def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust,analysis_date,existingmgtids):
     """
 
     :param args:
@@ -1478,10 +1780,10 @@ def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust):
     if args.timesegment == "week":
         dateformat = "%Y-%m-%d"
         # run topdown clustering with number of days as cutoff
-        invest_clusters = get_topdown_invest_clusters_week(args, initClusters, clusters, distances, distances[-2], [])
+        invest_clusters = get_topdown_invest_clusters_week(args, initClusters, clusters, distances, distances[-2], [],existingmgtids)
     elif args.timesegment == "month":
         dateformat = "%Y-%m"
-        invest_clusters = get_topdown_invest_clusters_month(args, initClusters, clusters, distances, distances[-2], [])
+        invest_clusters = get_topdown_invest_clusters_month(args, initClusters, clusters, distances, distances[-2], [],existingmgtids)
 
     for i in invest_clusters:
         # check that no clusters within investigation cluster are already marked as investigation
@@ -1501,6 +1803,7 @@ def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust):
         #   The earliest date in this cluster is after the start of the analysis period
         if not contains_investigation and not args.background_data and mindate >= datetime.strptime(args.startdate,dateformat):
             i.investigation = True
+            i.investigation_date = analysis_date
 
     print("Compare to existing clusters")
 
@@ -1516,64 +1819,82 @@ def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust):
         strains_in_old_clusters += cluster.strains
     strains_in_old_clusters = set(strains_in_old_clusters)
 
-    for i in invest_clusters:
-        #collect any strains that are in existing clusters but are also in new investigation clusters (should be none)
-        no_already_clustered = len(set(i.strains).intersection(strains_in_old_clusters))
-        if no_already_clustered == 0:
-            # assign cluster status as new investigation
-            i.status = "new"
-            # below section identifies if clusters have an MGT identifier or a simple number (where no MGT assignments are given)
-            mgtidsn = []
-            for x in mgtids:
-                if isinstance(x,int):
-                    mgtidsn.append(x)
-                else:
-                    if x.isdigit():
-                        mgtidsn.append(int(x))
-            mgtids = list(mgtidsn)
-            if mgtids != []:
-                nextintid = str(max(mgtids)+1)
-            else:
-                nextintid = str(1)
-            if args.enterobase_data:
-                mgtid = i.make_hierccid(nextintid)
-            else:
-                #if MGT data is present then nextintid is not used, if MGt data is not present the cluster is assigned the name nextintid
-                mgtid = i.make_mgtid(nextintid)
-            mgtids.append(mgtid)
-            # add investigation cluster to list for output
-            invest_out.append(i)
-    return invest_out
+    # ident_investigation_merges(new_clust_in_old_invest)
 
-def static_clusters(args, clusters, new_clust_in_old_invest, unchanged_oldclust):
+    for i in invest_clusters:
+        if i.investigation:
+            #collect any strains that are in existing clusters but are also in new investigation clusters (should be none)
+            no_already_clustered = len(set(i.strains).intersection(strains_in_old_clusters))
+            if no_already_clustered == 0:
+                # assign cluster status as new investigation
+                i.status = "new"
+                mgtid,existingmgtids = i.make_nomenid(existingmgtids, args)
+                mgtids.append(mgtid)
+                # add investigation cluster to list for output
+                invest_out.append(i)
+            else:
+                print("Overlap_with_existing_clusters",no_already_clustered,i)
+                sl(100)
+
+    return invest_out,existingmgtids
+
+def static_clusters(args, clusters, new_clust_in_old_invest, unchanged_oldclust,analysis_date,existingmgtids):
     cutoff = args.static_cutoff
     clusters = clusters[cutoff]
     invest_clusters = [clusters[x] for x in clusters if clusters[x].size >= args.minsize]
     invest_out = []
     mgtids = []
     strains_in_old_clusters = []
-    for cluster in list(new_clust_in_old_invest + unchanged_oldclust):
+    clusterlist = list(new_clust_in_old_invest[cutoff] + unchanged_oldclust[cutoff])
+    for cluster in clusterlist:
         mgtids.append(cluster.mgtid)
         strains_in_old_clusters += cluster.strains
     strains_in_old_clusters = set(strains_in_old_clusters)
+    timefilt_invest = []
+    if args.exclude_time_in_static:
+        for invcluster in invest_clusters:
+            if args.timesegment == "week":
+                dateformat = "%Y-%m-%d"
+                if invcluster.dayspan != "" and invcluster.yearspan != "" and invcluster.monthspan != "" and invcluster.maxdate >= datetime.strptime(args.startdate, dateformat):
+                    timefilt_invest.append(invcluster)
+            elif args.timesegment == "month":
+                dateformat = "%Y-%m"
+                if invcluster.yearspan != "" and invcluster.monthspan != "" and invcluster.maxmonth >= datetime.strptime(args.startdate, dateformat):
+                    timefilt_invest.append(invcluster)
+    else:
+        if args.timesegment == "week":
+            dateformat = "%Y-%m-%d"
+            for invcluster in invest_clusters:
+                # run topdown clustering with number of days as cutoff
+                if invcluster.dayspan != "" and invcluster.yearspan != "" and invcluster.monthspan != "" and invcluster.mindate >= datetime.strptime(args.startdate,dateformat):
+                # if cluster yearspan and monthspan is <= 2 AND dayspan is <= timewindow in args #TODO paramaterise
+                    if invcluster.yearspan <= 2 and invcluster.monthspan <= 2 and invcluster.dayspan <= args.timewindow:
+                    #if strain set of current cluster is the same as previous cluster pass to n+1 distance calc
+                        timefilt_invest.append(invcluster)
+        elif args.timesegment == "month":
+            dateformat = "%Y-%m"
+            for invcluster in invest_clusters:
+                if invcluster.yearspan != "" and invcluster.monthspan != "" and invcluster.minmonth >= datetime.strptime(args.startdate,dateformat):
+                    if invcluster.yearspan <= 2 and invcluster.monthspan <= args.timewindow:
+                        timefilt_invest.append(invcluster)
 
-    for i in invest_clusters:
+
+
+    for i in timefilt_invest:
         no_already_clustered = len(set(i.strains).intersection(strains_in_old_clusters))
         if no_already_clustered == 0:
             i.status = "new"
             i.investigation = True
+            i.investigation_date = analysis_date
             mgtids = [int(x) for x in mgtids if x.isdigit()]
             if mgtids != []:
                 nextintid = max(mgtids) + 1
             else:
                 nextintid = 1
-            if args.enterobase_data:
-                mgtid = i.make_hierccid(nextintid)
-            else:
-                mgtid = i.make_mgtid(nextintid)
+            mgtid,existingmgtids = i.make_nomenid(existingmgtids, args)
             mgtids.append(mgtid)
             invest_out.append(i)
-    return invest_out
+    return invest_out,existingmgtids
 
 
 def unsupervised_clust():
@@ -1591,7 +1912,7 @@ def add_uniqueclusterid(strain_to_cluster):
     return outres
 
 
-def writeout_isolates(args,clusters,strain_2_cluster):
+def writeout_isolates(args,clusters):
     # output should be "STRAIN   METADATA(time, location etc)    MGT levels  CC-maybe??  11-ODC-levels   investigate?\n
     # strain, ODCs and investigation from clusters
     # MGT and CC from MGT output
@@ -1599,11 +1920,11 @@ def writeout_isolates(args,clusters,strain_2_cluster):
     distances = get_distances_frm_args(args)
 
     distances = [0]+[x-1 for x in distances if x != 1]
-    odcslist = [str(x)+'cluster' for x in reversed(distances)]
+    # odcslist = [str(x)+'cluster' for x in reversed(distances)]
 
     straininfodict = {}
     header = ''
-
+    #TODO move below to function add test
     mgtd = OrderedDict()
     ccd = OrderedDict()
     countrycol = ""
@@ -1617,7 +1938,7 @@ def writeout_isolates(args,clusters,strain_2_cluster):
     typecol = ""
     hostcol = ""
     diseasecol = ""
-
+    isolatecol = ""
 
     with open(args.strainmetadata, 'r') as read_obj:
         csv_reader = reader(read_obj,delimiter="\t")
@@ -1637,8 +1958,12 @@ def writeout_isolates(args,clusters,strain_2_cluster):
                 if colname.startswith("HC"):
                     mgtd[colname] = col
             else:
-                if colname in ["Name","Strain","Isolate"]:
-                    isolatecol = col
+                if args.isolatecolumn:
+                    if colname == args.isolatecolumn:
+                        isolatecol = col
+                else:
+                    if colname.lower() in ["name","strain","isolate"]:
+                        isolatecol = col
                 if "Date".lower() in colname.lower():
                     datecol = col
                 if "Month".lower() in colname.lower():
@@ -1648,10 +1973,10 @@ def writeout_isolates(args,clusters,strain_2_cluster):
                 if colname == "MGT 1":
                     name = "MGT1"
                     mgtd[name] = col
-                if colname.startswith("MGT"):
+                if colname.startswith("MGT") and "CC" not in colname:
                     mgtd[colname] = col
-                if colname.startswith("CC-") and "ODC" not in colname:
-                    name = colname.split("-")[-1]
+                if " CC" in colname and "ODC" not in colname:
+                    name = colname.split(" ")[0]
                     ccd[name] = col
             if "Country" in colname:
                 countrycol = col
@@ -1676,7 +2001,7 @@ def writeout_isolates(args,clusters,strain_2_cluster):
             for row in straininfo[1:]:
                 straininfodict[row[isolatecol]] = row
         else:
-            sys.exit("please name column with strain name as one of 'Isolate','Strain','Name'")
+            sys.exit("please name column with strain name as one of 'Isolate','Strain','Name' or define it with --isolatecolumn")
 
     outheader = ["Isolate"]
     for col in metacols:
@@ -1686,8 +2011,8 @@ def writeout_isolates(args,clusters,strain_2_cluster):
         outheader.append(col)
     for col in ccd:
         outheader.append(col)
-    for level in distances:
-        outheader.append(str(level)+"cluster")
+    # for level in distances:
+    #     outheader.append(str(level)+"cluster")
     outheader.append("investigation cluster")
     # outf.write("\t".join(outheader))
     outrows = [outheader]
@@ -1702,44 +2027,34 @@ def writeout_isolates(args,clusters,strain_2_cluster):
         for col in ccd:
             outrow.append(straininfodict[strain][ccd[col]])
         investigate = ""
-        if strain in strain_2_cluster:
-            for level in distances:
-                id = strain_2_cluster[strain][level]
-                if id in clusters[level]:
-                    cluster = clusters[level][id]
-                    clusterid = str(cluster.id)
-                    clustermgtid = str(cluster.mgtid)
-                    if cluster.size > 1:
-                        outrow.append(clusterid)
-                    else:
-                        outrow.append("")
-                    if cluster.investigation:
-                        investigate = "id " + clustermgtid + ":" + str(level)
+        for level in clusters:
+            for invclust in clusters[level]:
+                if args.background_data:
+                    invclustobj = clusters[level][invclust]
+                    if strain in invclustobj.strainnames:
+                        investigate = invclustobj.mgtid
                 else:
-                    outrow.append("")
-        else:
-            for i in distances:
-                outrow.append("")
+                    if strain in invclust.strainnames:
+                        investigate = invclust.mgtid
         outrow.append(investigate)
         outrows.append(outrow)
 
     outdf = pd.DataFrame.from_records(outrows[1:],columns=outrows[0])
-    outdf.sort_values(odcslist,inplace=True)
+    # outdf.sort_values(odcslist,inplace=True)
     outdf.to_csv(args.isolates_out,sep="\t",index=False)
 
 
 def parseargs():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    ## input files
+    # input files
 
     required_args = parser.add_argument_group('Required input/output')
 
     required_args.add_argument("-i", "--variant_data",
                         help="file containing allele profiles (tab delimited table) "
-                             "or snp data (wildcard path to snippy outputs "
-                             "e.g. /folder/*_snippy = /folder/straina_snippy + /folder/strainb_snippy + ...)"
-                             'If using wildcards in path make sure to add ""', required=True)
+                             "or snp data (path to folder containing .subs.vcf files from snippy, and optionally consensus.fasta masked genomes.)"
+                               , required=True)
     required_args.add_argument("--inputtype", help="is input data alleles or snps", choices=["snp","allele"], required=True)
 
 
@@ -1761,6 +2076,11 @@ def parseargs():
                         help="data in this input set / time window to be used for background (no outbreak predictions)",action='store_true')
     optional_args.add_argument("-n", "--no_cores",
                                help="number cores to increase pairwise distance speed",default=8,type=int)
+    optional_args.add_argument("--nonomenclatureinid",
+                        help="Do not include MGT or HierCC nomenclature in investigation cluster ID",action='store_true')
+    optional_args.add_argument("--isolatecolumn",
+                        help="Name of column in metadata file that contains isolate names that correspond to input variant data, default = 'Strain', 'Name' or 'Isolate'")
+
 
     ## snp specific
 
@@ -1773,6 +2093,8 @@ def parseargs():
                         help="bed file for reference used to generate SNPs with regions to ignore SNPs (i.e. phages etc)")
     snp_args.add_argument("--snpqual",
                         help="minimum allowable SNP quality score",default=1000,type=int)
+    snp_args.add_argument("--usegenomes",
+                        help="use the consensus.fasta file from snippy to check for missing data when a snp is not called, include these genomes in the same folder as input vcf files",action='store_true')
 
     ## allele specific
 
@@ -1819,17 +2141,99 @@ def parseargs():
                         help="cutoff for static genetic cutoff method, must be used with '--outbreakmethod static' ",
                         type=int, default=5)
 
+    detection_options.add_argument("--exclude_time_in_static",
+                        help="When identifying clusters with one static threshold do not apply temporal window for cluster, must be used with '--outbreakmethod static' ",
+                        action='store_true')
+
+
+
 
     args = parser.parse_args()
+    #
+
+
+    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/MGT_AP_data_2month_w_background_aus.txt"
+    # args.inputtype = "allele"
+    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/example1_aus_2month_w_background_metadata.txt"
+    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v7_staticnotime"
+    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v3_background_distances.txt"
+    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
+    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_background_all_clusters.txt"
+    # # args.inclusters = False
+    # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v7_static_background_all_clusters.txt"
+    # # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v4_background_all_clusters.txt"
+    # # args.startdate = False
+    # args.startdate = "2017-01-01"
+    # args.enddate = "2017-02-28"
+    # # args.enddate = "2016-12-31"
+    # args.background_data = False
+    # args.no_cores = 8
+    # args.enterobase_data = False
+    # args.timesegment = 'week'
+    # args.timewindow = 28
+    # args.dist_limits = "1-5"
+    # args.max_missmatch = 100
+    # args.minsize = 5
+    # args.outbreakmethod = "static"
+    # args.numpy = False
+    # args.static_cutoff = 5
+    # args.nonomenclatureinid = False
+    # args.exclude_time_in_static = True
+
+    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT9_ST_allelic_profiles.tsv"
+    # args.inputtype = "allele"
+    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT_isolate_data.txt"
+    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv10"
+    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_distances.txt"
+    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
+    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_background_all_clusters.txt"
+    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_2021-05-11_2021-05-17_all_clusters.txt"
+    # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv5_background_all_clusters_mod.txt"
+    # args.startdate = "2015-01"
+    # args.enddate = "2015-08"
+    # args.background_data = False
+    # args.no_cores = 8
+    # args.enterobase_data = False
+    # args.timesegment = 'month'
+    # args.timewindow = 2
+    # args.dist_limits = "1-5"
+    # args.max_missmatch = 100
+    # args.minsize = 5
+    # args.outbreakmethod = "dodge"
+    # args.numpy = False
+    # args.static_cutoff = 5
+    # args.nonomenclatureinid = True
+
+    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT9_ST_allelic_profiles.tsv"
+    # args.inputtype = "allele"
+    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT_isolate_data.txt"
+    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv5"
+    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_distances.txt"
+    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
+    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_background_all_clusters.txt"
+    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_2021-05-11_2021-05-17_all_clusters.txt"
+    # args.inclusters = False
+    # args.startdate = "2014-01"
+    # args.enddate = "2014-12"
+    # args.background_data = True
+    # args.no_cores = 8
+    # args.enterobase_data = False
+    # args.timesegment = 'month'
+    # args.timewindow = 2
+    # args.dist_limits = "1-5"
+    # args.max_missmatch = 100
+    # args.minsize = 5
+    # args.outbreakmethod = "dodge"
+    # args.numpy = False
+    # args.static_cutoff = 5
 
     #################################
 
     if args.outbreakmethod == "static":
         args.dist_limits = str(args.static_cutoff)
-    # print(args.dist_limits)
+
     distances = get_distances_frm_args(args)
-    # print(args.dist_limits)
-    # print(distances)
+
     if args.max_missmatch <= max(distances):
         args.max_missmatch = max(distances)+10
 
@@ -1853,21 +2257,50 @@ def subsequent_occurrence_indexes(lst):
             indexes[item] = [index]
     return indexes
 
+def getobj(id,clusteridtoclust):
+    for level in clusteridtoclust:
+        if id in clusteridtoclust[level]:
+            clusterobj = clusteridtoclust[level][id]
+            return clusterobj
+
+def get_invest_merges(straintoclusters,clusteridtoclust):
+    merges = {}
+    for isolate in straintoclusters:
+        clusterls = straintoclusters[isolate]
+        if len(clusterls) > 1:
+            keyvaluelist = list(itertools.permutations(clusterls, 2))
+            for pair in keyvaluelist:
+                k = pair[0]
+                v = pair[1]
+                if k not in merges:
+                    merges[k] = [v]
+                else:
+                    if v not in merges[k]:
+                        merges[k].append(v)
+    for clusterid,mergeids in merges.items():
+        clusterobj = getobj(clusterid,clusteridtoclust)
+        for mergedwith in mergeids:
+            if mergedwith not in [x.id for x in clusterobj.merged]:
+                mergeobj = getobj(mergedwith,clusteridtoclust)
+                clusterobj.merged.append(mergeobj)
+    return merges
+
 def main():
     starttime = time.time()
 
     args = parseargs()
     # Make strain objects that contain MGT type, metadata
-    strainobjdict,odc10_to_strains = make_strains(args)
+    strainobjdict = make_strains(args)
     print(f"make strains --- {time.time() - starttime} seconds ---")
     starttime = time.time()
     prevcluster = {}
     hasdistance = []
     incluster = []
+    existingmgtids = []
     if args.inclusters:
         print("importing existing clusters")
         # add strain objects to cluster objects
-        prevcluster,incluster = import_clusters(args,strainobjdict)
+        prevcluster,incluster,existingmgtids = import_clusters(args,strainobjdict)
 
         # get strains that are not already in clusters
         # work out end of previous analysis and start of next
@@ -1954,28 +2387,67 @@ def main():
         print(f"group {group[0]} diffdata import, {len(group[1])} isolates  --- {time.time() - starttime} seconds ---")
         starttime = time.time()
 
-        if args.outbreakmethod == "dodge" and not args.background_data:
+        if args.outbreakmethod in ["dodge","static"] and not args.background_data:
 
             starttime = time.time()
-            strains_left_to_cluster = ident_additional_isolates(prevcluster,toprocess,strains_missing_inputs)
-            # distance_df1 = run_dist(args, diffdata, idlist, hasdistance, initiald, odc10_to_strains,writeout=False)
-            distance_df1 = run_dist(args, diffdata, strains_left_to_cluster, hasdistance, initiald, odc10_to_strains)
-            print(f"\t run_dist make df subset --- {time.time() - starttime} seconds ---")
-            starttime = time.time()
-            strain_to_cluster1 = run_agglom_cluster(args, strains_left_to_cluster, distance_df1, st_to_strain, strain_to_st)
-            print(f"\t agglom cluster --- {time.time() - starttime} seconds ---")
-            starttime = time.time()
-            strain_to_cluster2 = add_uniqueclusterid(strain_to_cluster1)
-            clusters_existing = make_clusters(args, strain_to_cluster2, distance_df1, strainobjdict, strain_to_st)
-            print(f"\t make clusters --- {time.time() - starttime} seconds ---")
-            starttime = time.time()
-            new_clust_in_old_invest, unchanged_oldclust = ident_expanded_old(prevcluster, clusters_existing,)
-            print(f"\t ident_expanded and old --- {time.time() - starttime} seconds ---")
-            starttime = time.time()
+            newstrains,too_old = ident_new_isolates(toprocess,strainobjdict,
+                                                                             groupname, args)
+            newly_clustered = {}
+            new_clust_in_old_invest = {}
+            unchanged_oldclust = {}
+            for level in prevcluster:
+                new_clust_in_old_invest[level] = []
+                unchanged_oldclust[level] = []
+                for cluster in prevcluster[level]:
+                    strainsadded = []
+                    #TODO clean up so levels not used are not calculated for agglom and make clusters - needs new functions to separate from later
+                    prevclusterobj = prevcluster[level][cluster]
+                    if prevclusterobj.investigation:
+                        strain_set_to_check_expansion = list(prevclusterobj.strainnames)
+                        strain_set_to_check_expansion += newstrains
+                        distance_df1 = run_dist(args, diffdata, strain_set_to_check_expansion, hasdistance, initiald)
+                        starttime = time.time()
+                        strainsadded,newly_clustered = check_for_expansion(args, newstrains, distance_df1, prevclusterobj,level,strainobjdict,strain_to_st,newly_clustered,prevrunadded=["placeholder"],addedtotal=strainsadded)
+                        if level > 0 and "_o" not in str(prevclusterobj.id):
+                            prevclusterobj.id = str(prevclusterobj.id)+"_o"
+                        if len(strainsadded) == 0:
+                            prevclusterobj.status = "unchanged"
+                            unchanged_oldclust[level].append(prevclusterobj)
+                        else:
+                            prevclusterobj.status = "expanded"
+                            new_clust_in_old_invest[level].append(prevclusterobj)
+                        print(f"\t cluster {prevclusterobj.mgtid} done. status = {prevclusterobj.status} --- {time.time() - starttime} seconds ---")
+                        print(strainsadded)
+                    # newly_clustered
+                    # print(f"\t agglom cluster --- {time.time() - starttime} seconds ---")
+                    # starttime = time.time()
+                    # strain_to_cluster2 = add_uniqueclusterid(strain_to_cluster1)
+                    #
+                    #
+                    # clusters_existing = make_clusters(args, strain_to_cluster2, distance_df1, strainobjdict,
+                    #                                   strain_to_st)
+                    # print(f"\t make clusters --- {time.time() - starttime} seconds ---")
+                    # starttime = time.time()
+                    # single_new_clust_in_old_invest, single_unchanged_oldclust, newly_clustered = ident_expanded_old_single_cluster(prevclusterobj,
+                    #                                                                             clusters_existing[level],newly_clustered)
+                    #
+                    # print(f"\t ident_expanded and old --- {time.time() - starttime} seconds ---")
+                    # starttime = time.time()
+                    # #TODO newly_clustered dict = newly_clustered[strain] = [str(new.mgtid)]
+                    # # if list for a strain > len 1 then strain will cause merge between two clusters - need to report
+                    # # currently just printed inside above function
+                    #
+                    # new_clust_in_old_invest[level] += single_new_clust_in_old_invest
+                    # unchanged_oldclust[level] += single_unchanged_oldclust
+
+
+
+            investmergers = get_invest_merges(newly_clustered,prevcluster)
+
             # sl(0.1)
             #run above again but with only non investigation isolates and new isolates not already assigned
             remaining_toprocess = get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,prev_strains,strains_missing_inputs)
-            distance_df = run_dist(args, diffdata, remaining_toprocess, hasdistance, initiald, odc10_to_strains)
+            distance_df = run_dist(args, diffdata, remaining_toprocess, hasdistance, initiald)
             print(f"\t run secondary dist --- {time.time() - starttime} seconds ---")
             starttime = time.time()
             strain_to_cluster = run_agglom_cluster(args, remaining_toprocess, distance_df, st_to_strain, strain_to_st)
@@ -1989,7 +2461,7 @@ def main():
         else:
             idlist_nomissing = list(set(idlist).difference(set(strains_missing_inputs)))
             # Use diffdata to generate or update a pairwise distance matrix (depending if one was supplied)
-            distance_df = run_dist(args, diffdata, idlist_nomissing, hasdistance, initiald, odc10_to_strains)
+            distance_df = run_dist(args, diffdata, idlist_nomissing, hasdistance, initiald)
 
             # Use distance to generate single linkage clusters
             strain_to_cluster = run_agglom_cluster(args,idlist_nomissing,distance_df,st_to_strain,strain_to_st)
@@ -2002,7 +2474,7 @@ def main():
             # clusters = {clusterlev: {clusterid: cluster_instance}}
 
             # compare new clusters to old ones to identify those that have expanded
-            new_clust_in_old_invest,unchanged_oldclust = ident_expanded_old(prevcluster,clusters)
+            new_clust_in_old_invest,unchanged_oldclust = ident_expanded_old(prevcluster, clusters)
             #new_clust_in_old_invest = list of investigation cluster instances that have gained new isolates
             #unchanged_oldclust = list of unchanged investigation clusters
 
@@ -2012,7 +2484,7 @@ def main():
 
         elif args.outbreakmethod == "dodge": ## USE THIS
             # Run top down clustering
-            investigationClusters = topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust)
+            investigationClusters,existingmgtids = topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust,groupname,existingmgtids)
             # investigationClusters = list of clusters assigned as investigation
             print("Writing outputs for {}".format(groupname))
             #output investigation cluster summaries for new, expanded and unchanged investigation clusters
@@ -2027,22 +2499,38 @@ def main():
                 for unchanged in unchanged_oldclust[level]:
                     investigationClusters.append(unchanged)
                     unchanged.writesummary(args.investigation_out,args)
+            outinvestclusters = {}
+            for iclust in investigationClusters:
+                clevel = iclust.level
+                if clevel not in outinvestclusters:
+                    outinvestclusters[clevel] = [iclust]
+                else:
+                    outinvestclusters[clevel].append(iclust)
 
         elif args.outbreakmethod == "static": ## FOR COMPARISON TO MORE NUANCED METHODS
             # identify new, expanded and unchanged investigation clusters using a static distance cutoff
-            investigationClusters = static_clusters(args,clusters,new_clust_in_old_invest,unchanged_oldclust)
+            investigationClusters,existingmgtids = static_clusters(args,clusters,new_clust_in_old_invest,unchanged_oldclust,groupname,existingmgtids)
             print("Writing outputs for {}".format(groupname))
+            outinvestclusters = {args.static_cutoff:[]}
             for invest_clust in investigationClusters:
                 invest_clust.writesummary(args.investigation_out,args)
-            for expandinvest in new_clust_in_old_invest:
+                outinvestclusters[args.static_cutoff].append(invest_clust)
+            for expandinvest in new_clust_in_old_invest[args.static_cutoff]:
                 expandinvest.writesummary(args.investigation_out,args)
-            for unchanged in unchanged_oldclust:
+                outinvestclusters[args.static_cutoff].append(expandinvest)
+            for unchanged in unchanged_oldclust[args.static_cutoff]:
                 unchanged.writesummary(args.investigation_out,args)
+                outinvestclusters[args.static_cutoff].append(unchanged)
         #write out all clusters at all levels
         incluster = []
 
 
-        if args.outbreakmethod == "dodge" and not args.background_data:
+        if args.outbreakmethod in ["dodge","static"] and not args.background_data:
+            # for lev in outinvestclusters:
+            #     for cluster in outinvestclusters[lev]:
+            #         cluster.write(args.clusters_out, args)
+            #         strains = [x.name for x in cluster.strains if x.name not in incluster]
+            #         incluster += strains
             for lev in new_clust_in_old_invest:
                 for cluster in new_clust_in_old_invest[lev]:
                     cluster.write(args.clusters_out, args)
@@ -2067,11 +2555,11 @@ def main():
                     strains = [x.name for x in cluster.strains if x.name not in incluster]
                     incluster += strains
 
-        if args.outbreakmethod == "dodge" and not args.background_data:
-            writeout_isolates(args, clusters_existing, strain_to_cluster2)
+        if args.outbreakmethod in ["dodge","static"] and not args.background_data:
+            writeout_isolates(args, outinvestclusters)
         else:
             # write out all isolates
-            writeout_isolates(args, clusters, strain_to_cluster)
+            writeout_isolates(args, clusters)
         #update variables for next analysis group based on results from this analysis group
         initiald_head = set(initiald.head())
         distance_head = set(distance_df.head())
@@ -2086,21 +2574,27 @@ def main():
             merged_clusters = {}
             for level in clusters:
                 merged_clusters[level] = {}
-                for cluster in clusters[level]:
-                    cobj = clusters[level][cluster]
-                    merged_clusters[level][cluster] = cobj
-            if args.outbreakmethod == "dodge":
-                for cluster in investigationClusters:
-                    merged_clusters[cluster.level][cluster.id] = cluster
-                    #TODO utilise/ test below code to report merges better
-                # if level in clusters_existing:
-                #     for oldcluster in clusters_existing[level]:
-                #         if oldcluster not in merged_clusters[level]:
-                #             cobj = clusters_existing[level][oldcluster]
-                #             merged_clusters[level][oldcluster] = cobj
-                #         else:
-                #             cobj = clusters_existing[level][oldcluster]
-                #             merged_clusters[level][oldcluster + "_2"] = cobj
+
+                for clusterid in clusters[level]:
+                    merged_clusters[level][clusterid] = clusters[level][clusterid]
+                for unchanged in unchanged_oldclust[level]:
+                    unchanged.id = f"uc_{unchanged.id}"
+                    merged_clusters[level][unchanged.id] = unchanged
+                for expanded in new_clust_in_old_invest[level]:
+                    expanded.id = f"ex_{expanded.id}"
+                    merged_clusters[level][expanded.id] = expanded
+            # if args.outbreakmethod in ["dodge","static"]:
+            #     for cluster in investigationClusters:
+            #         merged_clusters[cluster.level][cluster.id] = cluster
+            #         #TODO utilise/ test below code to report merges better
+            #     # if level in clusters_existing:
+            #     #     for oldcluster in clusters_existing[level]:
+            #     #         if oldcluster not in merged_clusters[level]:
+            #     #             cobj = clusters_existing[level][oldcluster]
+            #     #             merged_clusters[level][oldcluster] = cobj
+            #     #         else:
+            #     #             cobj = clusters_existing[level][oldcluster]
+            #     #             merged_clusters[level][oldcluster + "_2"] = cobj
             prevcluster = merged_clusters
 
         print("Analysis finished for {}\n##############\n".format(groupname))

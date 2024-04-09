@@ -1,0 +1,1 @@
+WRONG	MGT 1	MGT2	MGT3	MGT4	MGT5	MGT6	MGT7	MGT8	MGT9	MGT2 CC	MGT3 CC	MGT4 CC	MGT5 CC	MGT6 CC	MGT7 CC	MGT8 CC	MGT9 CC	ODC1	ODC2	ODC5	ODC10	Continent	Country	State or sub country	Postcode	Source	Type	Host	Host disease	Collection date	Collection year	Collection month
