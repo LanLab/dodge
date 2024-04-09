@@ -1231,29 +1231,29 @@ def get_oldest_strain_date(straindict,prevcluster):
     print("oldest date {}".format(oldest))
     return oldest
 
-def get_start_end(args,strainobjdict,prevcluster):
-    if args.timesegment == "week":
-        if args.startdate and args.enddate:
-            startdate = datetime.strptime(args.startdate, '%Y-%m-%d')
-            enddate = datetime.strptime(args.enddate, '%Y-%m-%d')
-        elif args.startdate:
-            startdate = datetime.strptime(args.startdate, '%Y-%m-%d')
+def get_start_end(timesegment,startdatestr,enddatestr,strainobjdict,prevcluster):
+    if timesegment == "week":
+        if startdatestr and enddatestr:
+            startdate = datetime.strptime(startdatestr, '%Y-%m-%d')
+            enddate = datetime.strptime(enddatestr, '%Y-%m-%d')
+        elif startdatestr:
+            startdate = datetime.strptime(startdatestr, '%Y-%m-%d')
             enddate = get_newest_strain_date(strainobjdict)
-        elif args.enddate:
-            enddate = datetime.strptime(args.enddate, '%Y-%m-%d')
+        elif enddatestr:
+            enddate = datetime.strptime(enddatestr, '%Y-%m-%d')
             startdate = get_oldest_strain_date(strainobjdict,prevcluster)
         else:
             enddate = get_newest_strain_date(strainobjdict)
             startdate = get_oldest_strain_date(strainobjdict, prevcluster)
-    elif args.timesegment == "month":
-        if args.startdate and args.enddate:
-            startdate = datetime.strptime(args.startdate, '%Y-%m')
-            enddate = datetime.strptime(args.enddate, '%Y-%m')
-        elif args.startdate:
-            startdate = datetime.strptime(args.startdate, '%Y-%m')
+    elif timesegment == "month":
+        if startdatestr and enddatestr:
+            startdate = datetime.strptime(startdatestr, '%Y-%m')
+            enddate = datetime.strptime(enddatestr, '%Y-%m')
+        elif startdatestr:
+            startdate = datetime.strptime(startdatestr, '%Y-%m')
             enddate = get_newest_strain_month(strainobjdict)
-        elif args.enddate:
-            enddate = datetime.strptime(args.enddate, '%Y-%m')
+        elif enddatestr:
+            enddate = datetime.strptime(enddatestr, '%Y-%m')
             startdate = get_oldest_strain_month(strainobjdict,prevcluster)
         else:
             enddate = get_newest_strain_month(strainobjdict)
@@ -1263,7 +1263,7 @@ def get_start_end(args,strainobjdict,prevcluster):
     return startdate,enddate
 
 def get_background_strains(args,strainobjdict,prevcluster={}):
-    startdate, enddate = get_start_end(args, strainobjdict, prevcluster)
+    startdate, enddate = get_start_end(args.timesegment,args.startdate,args.enddate, strainobjdict, prevcluster)
     print(startdate,enddate)
     strainls = []
     for strain in strainobjdict:
