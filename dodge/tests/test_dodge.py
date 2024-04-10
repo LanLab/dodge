@@ -36,7 +36,7 @@ def compare_files(file1_path, file2_path):
 class TestMetadatacols(unittest.TestCase):
     def test_correct_metacols(self):
         cwd = os.getcwd()
-        infile = open(cwd+"/inputs/correct_mgt_metadata.txt", "r")
+        infile = open(cwd+"/tests/inputs/correct_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
@@ -46,7 +46,7 @@ class TestMetadatacols(unittest.TestCase):
 
     def test_noisolate_metacols(self):
         cwd = os.getcwd()
-        infile = open(cwd + "/inputs/noisolate_mgt_metadata.txt", "r")
+        infile = open(cwd + "/tests/inputs/noisolate_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
@@ -54,7 +54,7 @@ class TestMetadatacols(unittest.TestCase):
 
     def test_empty_noisolate_metacols(self):
         cwd = os.getcwd()
-        infile = open(cwd + "/inputs/empty_mgt_metadata.txt", "r")
+        infile = open(cwd + "/tests/inputs/empty_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
@@ -128,13 +128,13 @@ class TestDodge_full(unittest.TestCase):
 
         self.maxDiff = 5000
         cwd = os.getcwd()
-        args = argparse.Namespace(variant_data = cwd+"/inputs/fulltest1_2_allele_ap.txt",
+        args = argparse.Namespace(variant_data = cwd+"/tests/inputs/fulltest1_2_allele_ap.txt",
                                     inputtype = "allele",
-                                    strainmetadata = cwd+"/inputs/fulltest1_week_allele_metadata.txt",
+                                    strainmetadata = cwd+"/tests/inputs/fulltest1_week_allele_metadata.txt",
                                     outputPrefix = cwd+"/outputs/fulltest1_out",
-                                    distances = cwd+"/inputs/fulltest1_background_pairwise_distances.txt",
+                                    distances = cwd+"/tests/inputs/fulltest1_background_pairwise_distances.txt",
                                     # distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt",
-                                    inclusters = cwd+"/inputs/fulltest1_background_all_clusters.txt",
+                                    inclusters = cwd+"/tests/inputs/fulltest1_background_all_clusters.txt",
                                     # inclusters = False,
                                     # inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v7_static_background_all_clusters.txt",
                                     # inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v4_background_all_clusters.txt",
@@ -171,13 +171,13 @@ class TestDodge_full(unittest.TestCase):
     def test_with_dummy_month_investigation(self):
         self.maxDiff = 5000
         cwd = os.getcwd()
-        args = argparse.Namespace(variant_data = cwd+"/inputs/fulltest1_2_allele_ap.txt",
+        args = argparse.Namespace(variant_data = cwd+"/tests/inputs/fulltest1_2_allele_ap.txt",
                                     inputtype = "allele",
-                                    strainmetadata = cwd+"/inputs/fulltest2_month_allele_metadata.txt",
+                                    strainmetadata = cwd+"/tests/inputs/fulltest2_month_allele_metadata.txt",
                                     outputPrefix = cwd+"/outputs/fulltest2_out",
-                                    distances = cwd+"/inputs/fulltest2_background_pairwise_distances.txt",
+                                    distances = cwd+"/tests/inputs/fulltest2_background_pairwise_distances.txt",
                                     # distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt",
-                                    inclusters = cwd+"/inputs/fulltest2_background_all_clusters.txt",
+                                    inclusters = cwd+"/tests/inputs/fulltest2_background_all_clusters.txt",
                                     # inclusters = False,
                                     # inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v7_static_background_all_clusters.txt",
                                     # inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v4_background_all_clusters.txt",
