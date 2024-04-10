@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 from datetime import datetime
-import dodge
+from dodge import dodge
 import argparse
 import hashlib
 from time import sleep as sl
@@ -35,27 +35,30 @@ def compare_files(file1_path, file2_path):
 
 class TestMetadatacols(unittest.TestCase):
     def test_correct_metacols(self):
-        infile = open("dodge/tests/inputs/correct_mgt_metadata.txt", "r")
+        cwd = os.getcwd()
+        infile = open(cwd+"/inputs/correct_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
-        ident_meta_columns_out = dodge.dodge.ident_meta_columns(header)
+        ident_meta_columns_out = dodge.ident_meta_columns(header)
         anymissing = any([x == "" for x in ident_meta_columns_out[:4]])
         self.assertFalse(anymissing, 'Isolate, Date, Month or Year column detection not working')
 
     def test_noisolate_metacols(self):
-        infile = open("dodge/tests/inputs/noisolate_mgt_metadata.txt", "r")
+        cwd = os.getcwd()
+        infile = open(cwd + "/inputs/noisolate_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
-        self.assertRaises(SystemExit,dodge.dodge.ident_meta_columns,header,isolatename=False,enterobase=False)
+        self.assertRaises(SystemExit,dodge.ident_meta_columns,header,isolatename=False,enterobase=False)
 
     def test_empty_noisolate_metacols(self):
-        infile = open("dodge/tests/inputs/empty_mgt_metadata.txt", "r")
+        cwd = os.getcwd()
+        infile = open(cwd + "/inputs/empty_mgt_metadata.txt", "r")
         inf = infile.read().splitlines()[0]
         infile.close()
         header = inf.split("\t")
-        self.assertRaises(SystemExit,dodge.dodge.ident_meta_columns,header,isolatename=False,enterobase=False)
+        self.assertRaises(SystemExit,dodge.ident_meta_columns,header,isolatename=False,enterobase=False)
 
 class TestGetStartEnd(unittest.TestCase):
 
