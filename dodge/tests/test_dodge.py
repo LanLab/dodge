@@ -60,23 +60,23 @@ class TestMetadatacols(unittest.TestCase):
 class TestGetStartEnd(unittest.TestCase):
 
     def test_week_with_start_end_date(self):
-        startdate, enddate = dodge.dodge.get_start_end("week", "2024-01-01", "2024-01-07", {}, {})
+        startdate, enddate = dodge.get_start_end("week", "2024-01-01", "2024-01-07", {}, {})
         self.assertEqual(startdate, datetime(2024, 1, 1))
         self.assertEqual(enddate, datetime(2024, 1, 7))
 
     def test_week_with_start_date_only(self):
-        startdate, enddate = dodge.dodge.get_start_end("week", "2024-01-01", None, {}, {})
+        startdate, enddate = dodge.get_start_end("week", "2024-01-01", None, {}, {})
         self.assertEqual(startdate, datetime(2024, 1, 1))
         # End date should be the newest strain date in this case
 
     def test_week_with_end_date_only(self):
-        startdate, enddate = dodge.dodge.get_start_end("week", None, "2024-01-07", {}, {})
+        startdate, enddate = dodge.get_start_end("week", None, "2024-01-07", {}, {})
         # Start date should be the oldest strain date in this case
         self.assertEqual(enddate, datetime(2024, 1, 7))
 
 
     def test_month_with_start_end_date(self):
-        startdate, enddate = dodge.dodge.get_start_end("month", "2024-01", "2024-02", {}, {})
+        startdate, enddate = dodge.get_start_end("month", "2024-01", "2024-02", {}, {})
         self.assertEqual(startdate, datetime(2024, 1, 1))
         self.assertEqual(enddate, datetime(2024, 2, 1))
 
@@ -86,28 +86,28 @@ class TestSNPDistMetric(unittest.TestCase):
         a = "ACGTGTAC"
         b = "ACGTGTAC"
         args = argparse.Namespace(max_missmatch=3)
-        result = dodge.dodge.snp_dist_metric(a, b, args)
+        result = dodge.snp_dist_metric(a, b, args)
         self.assertEqual(result, 0)
 
     def test_snp_dist_metric_with_missmatch_within_threshold(self):
         a = "ACGTCTAC"
         b = "ACGTGTAC"
         args = argparse.Namespace(max_missmatch=3)
-        result = dodge.dodge.snp_dist_metric(a, b, args)
+        result = dodge.snp_dist_metric(a, b, args)
         self.assertEqual(result, 1)
 
     def test_snp_dist_metric_with_missmatch_exceeding_threshold(self):
         a = "ACGATACC"
         b = "ACGTGTAC"
         args = argparse.Namespace(max_missmatch=3)
-        result = dodge.dodge.snp_dist_metric(a, b, args)
+        result = dodge.snp_dist_metric(a, b, args)
         self.assertEqual(result, 3)  # Missmatch exceeds the threshold
 
     def test_snp_dist_metric_with_missing_values(self):
         a = "ACG-TACC"
         b = "ACGTGNAC"
         args = argparse.Namespace(max_missmatch=3)
-        result = dodge.dodge.snp_dist_metric(a, b, args)
+        result = dodge.snp_dist_metric(a, b, args)
         self.assertEqual(result, 2)
 
 class TestDodge_full(unittest.TestCase):
@@ -154,7 +154,7 @@ class TestDodge_full(unittest.TestCase):
                                     exclude_time_in_static = False,
                                     usegenomes = False)
 
-        dodge.dodge.main(args)
+        dodge.main(args)
 
         investclusters = args.outputPrefix + "_2017-01-29_2017-02-04_investigation_clusters.txt"
 
@@ -197,7 +197,7 @@ class TestDodge_full(unittest.TestCase):
                                     exclude_time_in_static = False,
                                     usegenomes = False)
 
-        dodge.dodge.main(args)
+        dodge.main(args)
 
         investclusters = args.outputPrefix + "_2017-05_investigation_clusters.txt"
 
