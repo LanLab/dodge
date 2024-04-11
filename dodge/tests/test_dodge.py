@@ -115,7 +115,8 @@ class TestSNPDistMetric(unittest.TestCase):
 
 class TestDodge_full(unittest.TestCase):
     def setUp(self):
-        self.outputfolder = "outputs"
+        cwd = os.getcwd()
+        self.outputfolder = cwd+"/dodge/tests/outputs"
         if os.path.exists(self.outputfolder):
             shutil.rmtree(self.outputfolder)
             os.mkdir(self.outputfolder)
