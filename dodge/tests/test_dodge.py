@@ -131,7 +131,7 @@ class TestDodge_full(unittest.TestCase):
         args = argparse.Namespace(variant_data = cwd+"/dodge/tests/inputs/fulltest1_2_allele_ap.txt",
                                     inputtype = "allele",
                                     strainmetadata = cwd+"/dodge/tests/inputs/fulltest1_week_allele_metadata.txt",
-                                    outputPrefix = cwd+"/dodge/outputs/fulltest1_out",
+                                    outputPrefix = cwd+"/dodge/tests/outputs/fulltest1_out",
                                     distances = cwd+"/dodge/tests/inputs/fulltest1_background_pairwise_distances.txt",
                                     # distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt",
                                     inclusters = cwd+"/dodge/tests/inputs/fulltest1_background_all_clusters.txt",
@@ -161,7 +161,7 @@ class TestDodge_full(unittest.TestCase):
 
         investclusters = args.outputPrefix + "_2017-01-29_2017-02-04_investigation_clusters.txt"
 
-        expected_investclusters = cwd+"/dodge/expected_outputs/fulltest1_expected_investigation_clusters.txt"
+        expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest1_expected_investigation_clusters.txt"
 
 
         self.assertListEqual(
@@ -174,7 +174,7 @@ class TestDodge_full(unittest.TestCase):
         args = argparse.Namespace(variant_data = cwd+"/dodge/tests/inputs/fulltest1_2_allele_ap.txt",
                                     inputtype = "allele",
                                     strainmetadata = cwd+"/dodge/tests/inputs/fulltest2_month_allele_metadata.txt",
-                                    outputPrefix = cwd+"/dodge/outputs/fulltest2_out",
+                                    outputPrefix = cwd+"/dodge/tests/outputs/fulltest2_out",
                                     distances = cwd+"/dodge/tests/inputs/fulltest2_background_pairwise_distances.txt",
                                     # distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt",
                                     inclusters = cwd+"/dodge/tests/inputs/fulltest2_background_all_clusters.txt",
@@ -204,7 +204,7 @@ class TestDodge_full(unittest.TestCase):
 
         investclusters = args.outputPrefix + "_2017-05_investigation_clusters.txt"
 
-        expected_investclusters = cwd+"/dodge/expected_outputs/fulltest2_expected_investigation_clusters.txt"
+        expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest2_expected_investigation_clusters.txt"
 
 
         self.assertListEqual(
