@@ -572,21 +572,6 @@ def make_alignment(snpdict,genomedict,strains,args,refpos):
     print("{}/{} snp positions processed".format(c, len(posls)))
     return outalign,posls
 
-def get_identical_alignments(align):
-    outdict = {}
-    id_to_strain = {}
-    strain_to_id = {}
-    idls = []
-    for strain in align:
-        alignment = align[strain]
-        outdict[strain] = alignment
-        idls.append(strain)
-        id_to_strain[strain] = [strain]
-        strain_to_id[strain] = strain
-
-
-    return idls,outdict,id_to_strain,strain_to_id
-
 def check_files_present(args,allstrains):
     inp = args.variant_data + "/*.subs.vcf"
     filels = []
@@ -1423,18 +1408,6 @@ def get_smallest_gendist(cluster,smallest):
             else:
                 return get_smallest_gendist(cluster, True)
 
-def get_detection_clusters(args,clusters,detectlevel):
-
-    outc = []
-    for clusterid in clusters[detectlevel]:
-        cluster = clusters[detectlevel][clusterid]
-        if cluster.dayspan != "":
-            if cluster.dayspan <= args.timewindow and cluster.size >= 2:
-                outc.append(cluster)
-
-    return outc
-
-
 def get_init_clusters(args,clusters,initlevel):
     outc = []
 
@@ -1518,8 +1491,6 @@ def get_topdown_invest_clusters_week(args,prevclusters,clusters,distances,currpo
 
 def get_topdown_invest_clusters_month(args,prevclusters,clusters,distances,currpos,out,existingmgtids):
     print("Processing {} distance clusters".format(currpos))
-    currlevclusters = list(clusters[currpos].values())
-    cluster_to_check = []
     passtonext = []
     for c in prevclusters:
         containsclusters = c.contains[currpos]
@@ -1557,13 +1528,6 @@ def get_topdown_invest_clusters_month(args,prevclusters,clusters,distances,currp
 
 def ident_new_isolates(new_strains,strainobjdict,groupname,args):
 
-    #TODO only include isolates within current 4 week window for further analysis
-    # use groupname (date) - 4 weeks or 2 months
-    # strainobjdict to get each strain isolation date and check if in above timeframe
-
-
-
-
     datethreshold = ""
     if args.timesegment == "week":
         dateformat = "%Y-%m-%d"
@@ -1592,69 +1556,6 @@ def ident_new_isolates(new_strains,strainobjdict,groupname,args):
             else:
                 strains_too_old.append(strain)
     return new_strains_in_date,strains_too_old
-    # investigation_cluster_strains = {}
-    # for distance in prevcluster:
-    #     investigation_cluster_strains[distance] = {}
-    #     for cluster in prevcluster[distance]:
-    #         clusterobj = prevcluster[distance][cluster]
-    #         if clusterobj.investigation == True:
-    #             clusterstrainids = [x.name for x in clusterobj.strains]
-    #             investigation_cluster_strains[distance][clusterobj.name] = clusterstrainids + new_strains_in_date
-    #
-    # # strainstocluster = investigation_cluster_strains + new_strains_in_date
-    # # strainstocluster = [x for x in strainstocluster if x not in idlist]
-    # # strainstoclusterout = []
-    # # [strainstoclusterout.append(x) for x in strainstocluster if x not in strainstoclusterout]
-    # return investigation_cluster_strains,strains_too_old
-
-# def ident_additional_isolates(prevcluster,new_strains,idlist,strainobjdict,groupname,args):
-#
-#     #TODO only include isolates within current 4 week window for further analysis
-#     # use groupname (date) - 4 weeks or 2 months
-#     # strainobjdict to get each strain isolation date and check if in above timeframe
-#
-#
-#
-#     investigation_cluster_strains = []
-#     for distance in prevcluster:
-#         for cluster in prevcluster[distance]:
-#             clusterobj = prevcluster[distance][cluster]
-#             if clusterobj.investigation == True:
-#                 clusterstrainids = [x.name for x in clusterobj.strains]
-#                 investigation_cluster_strains += clusterstrainids
-#     datethreshold = ""
-#     if args.timesegment == "week":
-#         dateformat = "%Y-%m-%d"
-#         startdate = groupname.split("_")[0]
-#         datethreshold = datetime.strptime(startdate, dateformat) - timedelta(days=28)
-#     elif args.timesegment == "month":
-#         dateformat = "%Y-%m"
-#         d1 = datetime.strptime(groupname, dateformat)
-#         datethreshold = d1.replace(day=1) - timedelta(days=33)
-#     new_strains_in_date = []
-#     strains_too_old = []
-#     for strain in new_strains:
-#         strainobj = strainobjdict[strain]
-#         if args.timesegment == "week":
-#             dateformat = "%Y-%m-%d"
-#             straintime = datetime.strptime(strainobj.date,dateformat)
-#             if straintime >= datethreshold:
-#                 new_strains_in_date.append(strain)
-#             else:
-#                 strains_too_old.append(strain)
-#         elif args.timesegment == "month":
-#             dateformat = "%Y-%m"
-#             straintime = strainobj.monthdate.replace(day=1)
-#             if straintime > datethreshold:
-#                 new_strains_in_date.append(strain)
-#             else:
-#                 strains_too_old.append(strain)
-#
-#     strainstocluster = investigation_cluster_strains + new_strains_in_date
-#     strainstocluster = [x for x in strainstocluster if x not in idlist]
-#     strainstoclusterout = []
-#     [strainstoclusterout.append(x) for x in strainstocluster if x not in strainstoclusterout]
-#     return strainstoclusterout,strains_too_old
 
 def get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,prevstrains,strains_missing_inputs):
     remove = []
@@ -1670,36 +1571,6 @@ def get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,
     outids2 = []
     [outids2.append(x) for x in outids if x not in outids2]
     return outids2
-
-
-def get_non_overlapping_pairs(datalen):
-  """
-  Finds non-overlapping pairs of indexes in a list.
-
-  Args:
-      data: The input list.
-
-  Returns:
-      A list of tuples representing non-overlapping pairs of indexes.
-  """
-  result = []
-  for i in range(datalen):
-    for j in range(i + 1, datalen):
-      if i != j:  # Exclude self-pairs
-        result.append((i, j))
-  return result
-
-# def ident_investigation_merges(expanded_invest_clusters):
-#     for level in expanded_invest_clusters:
-#         pairls = get_non_overlapping_pairs(len(expanded_invest_clusters[level]))
-#         for pair in pairls:
-#             c1 = expanded_invest_clusters[level][pair[0]]
-#             c2 = expanded_invest_clusters[level][pair[1]]
-#             c1isolates = set(c1.strainnames)
-#             c2isolates = set(c2.strainnames)
-#             if len(c1isolates.intersection(c2isolates)) > 0:
-#                     c1.merged.append(c2)
-#                     c2.merged.append(c1)
 
 
 def topdown_clust(args,clusters,new_clust_in_old_invest,unchanged_oldclust,analysis_date,existingmgtids):
@@ -1839,9 +1710,6 @@ def static_clusters(args, clusters, new_clust_in_old_invest, unchanged_oldclust,
     return invest_out,existingmgtids
 
 
-def unsupervised_clust():
-    sl(1)
-    # todo later
 def add_uniqueclusterid(strain_to_cluster):
     outres = {}
     for strain in strain_to_cluster:
@@ -1866,7 +1734,6 @@ def writeout_isolates(args,clusters):
 
     straininfodict = {}
     header = ''
-    #TODO move below to function add test
     mgtd = OrderedDict()
     ccd = OrderedDict()
     countrycol = ""
@@ -2091,86 +1958,7 @@ def parseargs():
 
 
     args = parser.parse_args()
-    #
-
-
-    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/PycharmProjects/dodge/dodge/tests/inputs/fulltest1_2_allele_ap.txt"
-    # args.inputtype = "allele"
-    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/PycharmProjects/dodge/dodge/tests/inputs/fulltest2_month_allele_metadata.txt"
-    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/PycharmProjects/dodge/dodge/tests/expected_outputs/fulltest2"
-    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/PycharmProjects/dodge/dodge/tests/inputs/fulltest2_background_pairwise_distances.txt"
-    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
-    # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/PycharmProjects/dodge/dodge/tests/inputs/fulltest2_background_all_clusters.txt"
-    # # args.inclusters = False
-    # # args.distances = False
-    # # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v7_static_background_all_clusters.txt"
-    # # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/Aus2months/v4_background_all_clusters.txt"
-    # # args.startdate = False
-    # args.startdate = "2017-03"
-    # args.enddate = "2017-05"
-    # # args.enddate = "2016-12-31"
-    # args.background_data = False
-    # args.no_cores = 1
-    # args.enterobase_data = False
-    # args.timesegment = 'month'
-    # args.timewindow = 28
-    # args.dist_limits = "1-5"
-    # args.max_missmatch = 100
-    # args.minsize = 5
-    # args.outbreakmethod = "dodge"
-    # args.numpy = False
-    # args.static_cutoff = 5
-    # args.nonomenclatureinid = False
-    # args.exclude_time_in_static = False
-    # args.isolatecolumn = False
-
-    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT9_ST_allelic_profiles.tsv"
-    # args.inputtype = "allele"
-    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT_isolate_data.txt"
-    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv10"
-    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_distances.txt"
-    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
-    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_background_all_clusters.txt"
-    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_2021-05-11_2021-05-17_all_clusters.txt"
-    # args.inclusters = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv5_background_all_clusters_mod.txt"
-    # args.startdate = "2015-01"
-    # args.enddate = "2015-08"
-    # args.background_data = False
-    # args.no_cores = 8
-    # args.enterobase_data = False
-    # args.timesegment = 'month'
-    # args.timewindow = 2
-    # args.dist_limits = "1-5"
-    # args.max_missmatch = 100
-    # args.minsize = 5
-    # args.outbreakmethod = "dodge"
-    # args.numpy = False
-    # args.static_cutoff = 5
-    # args.nonomenclatureinid = True
-
-    # args.variant_data = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT9_ST_allelic_profiles.tsv"
-    # args.inputtype = "allele"
-    # args.strainmetadata = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/UK_2014_2022_MGT_isolate_data.txt"
-    # args.outputPrefix = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_mergfixv5"
-    # args.distances = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/Salmonella/2_stage_clustering/manuscript/bioinformatics_submission/revision/SEN_testing/mergefix/UK_2014_2022_distances.txt"
-    # # args.distances = "apg_testing/input_data/stm/vic_only_5min_2018bg_2021-01-26_2021-02-01_pairwise_distances.txt"
-    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_background_all_clusters.txt"
-    # # args.inclusters = "apg_testing/outputs/clusterproblem_fix_2021-05-11_2021-05-17_all_clusters.txt"
-    # args.inclusters = False
-    # args.startdate = "2014-01"
-    # args.enddate = "2014-12"
-    # args.background_data = True
-    # args.no_cores = 8
-    # args.enterobase_data = False
-    # args.timesegment = 'month'
-    # args.timewindow = 2
-    # args.dist_limits = "1-5"
-    # args.max_missmatch = 100
-    # args.minsize = 5
-    # args.outbreakmethod = "dodge"
-    # args.numpy = False
-    # args.static_cutoff = 5
-
+ 
     #################################
 
     if args.outbreakmethod == "static":
@@ -2190,22 +1978,6 @@ def parseargs():
 
     return args
 
-
-
-def subsequent_occurrence_indexes(lst):
-    indexes = {}
-    for index, item in enumerate(lst):
-        if item in indexes:
-            indexes[item].append(index)
-        else:
-            indexes[item] = [index]
-    return indexes
-
-def getobj(id,clusteridtoclust):
-    for level in clusteridtoclust:
-        if id in clusteridtoclust[level]:
-            clusterobj = clusteridtoclust[level][id]
-            return clusterobj
 
 
 def main(args=""):
@@ -2344,10 +2116,9 @@ def main(args=""):
                             prevclusterobj.status = "expanded"
                             new_clust_in_old_invest[level].append(prevclusterobj)
                         print(f"\t cluster {prevclusterobj.mgtid} done. status = {prevclusterobj.status} --- {time.time() - starttime} seconds ---")
-                        print(strainsadded)
+                        # print(strainsadded)
 
 
-            # sl(0.1)
             #run above again but with only non investigation isolates and new isolates not already assigned
             remaining_toprocess = get_remaining_isolates(new_clust_in_old_invest,unchanged_oldclust,toprocess,prev_strains,strains_missing_inputs)
             distance_df = run_dist(args, diffdata, remaining_toprocess, hasdistance, initiald)
@@ -2425,11 +2196,6 @@ def main(args=""):
 
 
         if args.outbreakmethod in ["dodge","static"] and not args.background_data:
-            # for lev in outinvestclusters:
-            #     for cluster in outinvestclusters[lev]:
-            #         cluster.write(args.clusters_out, args)
-            #         strains = [x.name for x in cluster.strains if x.name not in incluster]
-            #         incluster += strains
             for lev in new_clust_in_old_invest:
                 for cluster in new_clust_in_old_invest[lev]:
                     cluster.write(args.clusters_out, args)
