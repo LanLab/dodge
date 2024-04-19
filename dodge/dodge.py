@@ -1223,16 +1223,14 @@ def get_background_strains(args,strainobjdict,prevcluster={}):
             else:
                 strainls.append(strainob.name)
         elif args.timesegment == "month":
-            try:
-                if strainob.monthdate:
-                    if strainob.monthdate >= startdate and strainob.monthdate <= enddate:
-                        strainls.append(strainob.name)
-                else:
+            if strainob.monthdate:
+                if strainob.monthdate >= startdate and strainob.monthdate <= enddate:
                     strainls.append(strainob.name)
-            except Exception as e:
-                print(e)
-                print(strainob)
-                sys.exit()
+            else:
+                strainls.append(strainob.name)
+    
+    if len(strainls) == 0:
+        sys.exit("No strains were found in the background period specified, check --args.startdate and --args.enddate and/or metadata file")
 
     return [("background",strainls)],[]
 
@@ -1279,6 +1277,7 @@ def get_analysis_groups(args,strainobjdict,prevcluster={}):
     #3
     timesegment_lists = []
     start = startdate
+    added_strains = []
     if args.timesegment == "week":
         while start <= enddate:
             subls = []
@@ -1290,6 +1289,7 @@ def get_analysis_groups(args,strainobjdict,prevcluster={}):
                         subls.append(strain)
             groupname = "{}_{}".format(start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'))
             timesegment_lists.append((groupname,subls))
+            added_strains += subls
             start = start + timedelta(days=7)
     elif args.timesegment == "month":
         while start <= enddate:
@@ -1302,7 +1302,12 @@ def get_analysis_groups(args,strainobjdict,prevcluster={}):
                         subls.append(strain)
             groupname = start.strftime('%Y-%m')
             timesegment_lists.append((groupname,subls))
+            added_strains += subls
             start = add_months(start, 1)
+    
+    if added_strains == []:
+        sys.exit(sys.exit("No strains were found in the time range specified, check --args.startdate and --args.enddate and/or metadata file"))
+    
     return timesegment_lists,prev_strains
 
 
@@ -1899,7 +1904,7 @@ def writeout_isolates(args,clusters):
                     if colname == args.isolatecolumn:
                         isolatecol = col
                 else:
-                    if colname.lower() in ["name","strain","isolate"]:
+                    if colname.lower() in ["name","strain","isolate","isolate id","strain id","strain name","isolate name"]:
                         isolatecol = col
                 if "Date".lower() in colname.lower():
                     datecol = col
@@ -2203,10 +2208,18 @@ def getobj(id,clusteridtoclust):
             return clusterobj
 
 
-def main(args):
+def main(args=""):
+    
+    if args == "":
+        args = parseargs()
+
     starttime = time.time()
-
-
+    
+    # check output location
+    outfolder = os.path.dirname(args.outputPrefix)
+    if not os.path.exists(outfolder):
+        sys.exit(f"output path does not exist: {outfolder}")
+    
     # Make strain objects that contain MGT type, metadata
     strainobjdict = make_strains(args)
     print(f"make strains --- {time.time() - starttime} seconds ---")

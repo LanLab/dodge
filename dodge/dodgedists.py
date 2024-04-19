@@ -272,7 +272,7 @@ def run_multiprocessing(func, i, n_processors):
 
 
 
-def pairdist(args,pair,existids,initiald,profs):
+def pairdist(args,pair,existids,initiald,ap1,ap2):
     id1 = pair[0]
     id2 = pair[1]
     if id1 in existids and id2 in existids:
@@ -280,8 +280,6 @@ def pairdist(args,pair,existids,initiald,profs):
 
 
     else:
-        ap1 = profs[id1]
-        ap2 = profs[id2]
 
         if args.inputtype == "snp":
             dist = snp_dist_metric(ap1, ap2, args)
@@ -369,7 +367,7 @@ def run_dist(args,profs,idlist,hasdistance,initiald):
 
     print("\nCalculating pairwise distances\nDone\t\t% done\t\ttime")
 
-    inps = [(args,x,hasdistance,initiald,profs) for x in pairs]
+    inps = [(args, x, hasdistance, initiald, profs[x[0]], profs[x[1]]) for x in pairs]
 
     distlist = run_multiprocessing(pairdist,inps,args.no_cores)
 

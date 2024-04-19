@@ -4,33 +4,8 @@ import unittest
 from datetime import datetime
 from dodge import dodge
 import argparse
-import hashlib
 from time import sleep as sl
 
-
-def compare_files(file1_path, file2_path):
-    # Initialize SHA-256 hash objects
-    hash1 = hashlib.sha256()
-    hash2 = hashlib.sha256()
-
-    # Open the first file and update hash object with its contents
-    with open(file1_path, "rb") as file1:
-        while True:
-            chunk = file1.read(4096)
-            if not chunk:
-                break
-            hash1.update(chunk)
-
-    # Open the second file and update hash object with its contents
-    with open(file2_path, "rb") as file2:
-        while True:
-            chunk = file2.read(4096)
-            if not chunk:
-                break
-            hash2.update(chunk)
-
-    # Compare the hashes
-    return hash1.digest() == hash2.digest()
 
 
 class TestMetadatacols(unittest.TestCase):
