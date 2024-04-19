@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - review_changes
+      - main
 jobs:
   test:
 
