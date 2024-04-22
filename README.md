@@ -355,3 +355,7 @@ This script only runs the distance matrix generation component of dodge. Inputs 
 
   `--enterobase_data`     metadata and allele profiles downloaded from enterobase, if hierCC in metadata table hierCC will be used for outbreak naming (i.e. column named HCXXX)
                         (default: False)
+
+**A note on SNP-dists/cgMLST-dists**
+
+We chose not to utilise the existing SNP- and cgMLST-dists scripts for the following reasons: SNP-dists is only applicable for SNP based distances. However DODGE also supports allele based distances. Additionally, cgmlst-dists by the same author takes in ChewBBACA allele profiles which are not compatible with MGT allele profiles due to differences in dealing with missing data. We therefore wrote dodge-dists to accept either input format that can be used in DODGE.
