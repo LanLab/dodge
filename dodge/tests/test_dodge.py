@@ -139,10 +139,9 @@ class TestDodge_full(unittest.TestCase):
 
         expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest1_expected_investigation_clusters.txt"
 
-
-        self.assertListEqual(
-            list(open(investclusters)),
-            list(open(expected_investclusters)))
+        with open(investclusters) as observed:
+            with open(expected_investclusters) as expected:
+                self.assertListEqual(observed,expected)
 
     def test_with_dummy_month_investigation(self):
         self.maxDiff = 5000
@@ -181,11 +180,10 @@ class TestDodge_full(unittest.TestCase):
         investclusters = args.outputPrefix + "_2017-05_investigation_clusters.txt"
 
         expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest2_expected_investigation_clusters.txt"
-
-
-        self.assertListEqual(
-            list(open(investclusters)),
-            list(open(expected_investclusters)))
+        
+        with open(investclusters) as observed:
+            with open(expected_investclusters) as expected:
+                self.assertListEqual(observed,expected)
 
     def tearDown(self):
         shutil.rmtree(self.outputfolder)
