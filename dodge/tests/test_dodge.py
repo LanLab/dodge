@@ -140,7 +140,9 @@ class TestDodge_full(unittest.TestCase):
         expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest1_expected_investigation_clusters.txt"
 
         with open(investclusters) as observed:
+            observed = list(observed)
             with open(expected_investclusters) as expected:
+                expected = list(expected)
                 self.assertListEqual(observed,expected)
 
     def test_with_dummy_month_investigation(self):
@@ -182,7 +184,9 @@ class TestDodge_full(unittest.TestCase):
         expected_investclusters = cwd+"/dodge/tests/expected_outputs/fulltest2_expected_investigation_clusters.txt"
         
         with open(investclusters) as observed:
+            observed = list(observed)
             with open(expected_investclusters) as expected:
+                expected = list(expected)
                 self.assertListEqual(observed,expected)
 
     def tearDown(self):
