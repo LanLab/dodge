@@ -372,7 +372,8 @@ def unneg(a):
 def get_strain_to_st(args,strain,st):
     st_to_strain = {}
     strain_to_st = {}
-    inprofiles = open(args.variant_data, "r").read().splitlines()
+    with open(args.variant_data, "r") as f:
+        inprofiles = f.read().splitlines()
     for line in inprofiles[1:]:
         col = line.split("\t")
         if col[st] not in st_to_strain:
@@ -413,8 +414,8 @@ def import_allele_data(args,strains,backgroundstrains,hasdistance):
         st_to_strain,strain_to_st = get_strain_to_st(args, strain, st)
         return strains, {}, st_to_strain, strain_to_st, []
 
-
-    inprofiles = open(args.variant_data, "r").read().splitlines()
+    with open(args.variant_data, "r") as f:
+        inprofiles = f.read().splitlines()
 
     profs = {}
     st_to_strain = {}
@@ -449,7 +450,8 @@ def import_allele_data(args,strains,backgroundstrains,hasdistance):
     return idlist, profs, st_to_strain, strain_to_st,missing_profiles
 
 def parse_mask_bed(args):
-    bed = open(args.mask).read().splitlines()
+    with open(args.mask, "r") as f:
+        bed = f.read().splitlines()
     maskls = []
     for i in bed[1:]:
         col = i.split("\t")
@@ -487,7 +489,8 @@ def collect_SNPs(args,strains):
         name = os.path.basename(file).replace(".subs.vcf","")
         if name in strains:
             namels.append(name)
-            f = open(file,"r").read().splitlines()
+            with open(file, "r") as inf:
+                f = inf.read().splitlines()
             for line in f:
                 if line[0] != "#" and "TYPE=snp" in line and "OLDVAR=" not in line:
                     col = line.split("\t")
@@ -528,7 +531,8 @@ def get_genomes(strainls,args):
     for i in filels:
         strain = i.split("/")[-1].replace(".consensus.subs.fa","")
         if strain in strainls:
-            ingenome = open(i,"r").read().splitlines()
+            with open(i, "r") as inf:
+                ingenome = inf.read().splitlines()
             genomeseq = "".join(ingenome[1:])
             genomedict[strain] = genomeseq
     return genomedict
@@ -657,8 +661,10 @@ def import_clusters(args,strainobjdict):
     
     if not os.path.exists(args.inclusters):
         sys.exit(f"cluster file at {args.inclusters} does not exist, check paths")
+
+    with open(args.inclusters, "r") as inf:
+        inclusters = inf.read().splitlines()
     
-    inclusters = open(args.inclusters).read().splitlines()
     clusters = {}
     prevstrains = []
     existingmgtids = []
@@ -851,10 +857,17 @@ def run_dist(args,profs,idlist,hasdistance,initiald):
     ######################################################
 
     start_time = time.time()
-    newdf = pd.DataFrame(index=idlist,columns=idlist,dtype=str)
+
+    # newdf = pd.DataFrame(index=idlist,columns=idlist,dtype=str)
+    # newdf.index = newdf.index.astype(str)
+    # newdf.columns = newdf.columns.astype(str)
+    # newdf.fillna(args.max_missmatch,inplace=True)
+    indata = [[args.max_missmatch] * len(idlist)] * len(idlist)
+    newdf = pd.DataFrame(index=idlist, columns=idlist, data=indata)
     newdf.index = newdf.index.astype(str)
     newdf.columns = newdf.columns.astype(str)
-    newdf.fillna(args.max_missmatch,inplace=True)
+    
+
 
     exist = []
     for i in newdf.columns.tolist():
